@@ -93,8 +93,8 @@ class brokerOutput : public glass3::output::output {
 
 	/**
 	 * \brief the function for producer logging
-   * This function is used by the HazDevBroker producer to log messages
-   * with neic-glass3's logging system. 
+	 * This function is used by the HazDevBroker producer to log messages
+	 * with neic-glass3's logging system.
 	 * \param message - A string containing the logging message
 	 */
 	void logProducer(const std::string &message);

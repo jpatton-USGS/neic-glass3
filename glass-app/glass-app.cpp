@@ -23,7 +23,7 @@
  *
  * \par Usage
  * \parblock
- * <tt>glass-app <configfile> [logname] [noconsole]</tt>
+ * <tt>glass-app <configfile> [<logname>] [noconsole]</tt>
  *
  * \par Where
  * \parblock
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 					<< std::to_string(PROJECT_VERSION_MAJOR) << "."
 					<< std::to_string(PROJECT_VERSION_MINOR) << "."
 					<< std::to_string(PROJECT_VERSION_PATCH) << "; Usage: "
-					<< "glass-app <configfile>  [logname] [noconsole]"
+					<< "glass-app <configfile> [<logname>]  [noconsole]"
 					<< std::endl;
 		return 1;
 	}
