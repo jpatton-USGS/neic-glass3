@@ -18,14 +18,10 @@
  * \brief traveltime namespace phase travel time classes and functions
  *
  * The traveltime namespace contains various classes and functions used
- * in the generation, calculation, and lookup of seismic phase travel
+ * in the calculation and lookup of seismic phase travel
  * times and expected distances.
  */
 namespace traveltime {
-
-// forward declarations
-class CRay;
-class CTimeWarp;
 
 /**
  * \brief travel time phase class
@@ -157,32 +153,64 @@ class CTravelTime {
 	double bilinear(double distance, double depth);
 
 	/**
-	 * \brief A pointer to the distance warp object used
+	 * \brief An integer variable containing the array index size for the distance
+	 * array
 	 */
-	CTimeWarp *m_pDistanceWarp;
+	int m_iNumDistances;
 
 	/**
-	 * \brief A pointer to the depth warp object used
+	 * \brief An double variable containing the minimum distance of the depth 
+	 * distance array
 	 */
-	CTimeWarp *m_pDepthWarp;
+	double m_dMinimumDistance;
 
 	/**
-	 * \brief An integer variable containing the grid index for the distance
-	 * warp
+	 * \brief An double variable containing the maximum distance of the depth 
+	 * distance array
 	 */
-	int m_iNumDistanceWarp;
+	double m_dMaximumDistance;
 
 	/**
-	 * \brief An integer variable containing the grid index for the depth
-	 * warp
+	 * \brief An integer variable containing the array index size for the depth
+	 * array
 	 */
-	int m_iNumDepthWarp;
+	int m_iNumDepths;
+
+	/**
+	 * \brief An double variable containing the minimum depth of the depth 
+	 * distance array
+	 */
+	double m_dMinimumDepth;
+
+	/**
+	 * \brief An double variable containing the maximum Depth of the depth 
+	 * distance array
+	 */
+	double m_dMaximumDepth;
+
+	/**
+	 * \brief An integer variable containing the array index size for the travel
+	 * time array
+	 */
+	int m_iNumTimes;
+
+	/**
+	 * \brief An double variable containing the minimum time of the travel 
+	 * time array
+	 */
+	double m_dMinimumTime;
+
+	/**
+	 * \brief An double variable containing the maximum Depth of the travel 
+	 * time array
+	 */
+	double m_dMaximumTime;
 
 	/**
 	 * \brief An array of double values containing the travel times indexed by
 	 * depth and distance
 	 */
-	double * m_pTravelTimeArray;
+	double * m_pDepthTravelTimeArray;
 
 	/**
 	 * \brief An array of double values containing the distances indexed by
@@ -191,27 +219,40 @@ class CTravelTime {
 	double * m_pDepthDistanceArray;
 
 	/**
-	 * \brief An array of characters containing the phases
-	 */
-	char * m_pPhaseArray;
-
-	/**
 	 * \brief A std::std::string containing the name of the phase used for this
 	 * CTravelTime
 	 */
 	std::string m_sPhase;
 
 	/**
-	 * \brief Delta in degrees used by caller to calculate distance
+	 * \brief distance Delta in degrees used by caller to calculate distance
 	 * dependent weights
 	 */
-	double m_dDelta;
+	double m_dDistanceDelta;
+
+	/**
+	 * \brief Depth Delta in km used by caller to calculate depth
+	 * dependent weights
+	 */
+	double m_dDepthDelta;
+
+	/**
+	 * \brief Time Delta in seconds used by caller to calculate time
+	 * dependent weights
+	 */
+	double m_dTimeDelta;
 
 	/**
 	 * \brief Depth in km used by caller to calculate distance
 	 * dependent weights
 	 */
 	double m_dDepth;
+
+	/**
+	 * \brief Delta in degrees used by caller to calculate distance
+	 * dependent weights
+	 */
+	double m_dDelta;
 
 	/**
 	 * \brief Ephemeral (temporary) glass3::util::Geo object containing current
