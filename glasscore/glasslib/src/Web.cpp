@@ -1584,9 +1584,8 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		glass3::util::Logger::log(
 				"error",
 				"CWeb::addSiteToNode: No valid travel times for site "
-						+ newSite->getSCNL() + " distance " + std::to_string(distance)
-						+ " in web " + m_sName
-						+ ".");
+						+ newSite->getSCNL() + " distance for " + phase1 + " or " + phase2
+						+ std::to_string(distance) + " in web " + m_sName + ".");
 
 		return(false);
 	}
