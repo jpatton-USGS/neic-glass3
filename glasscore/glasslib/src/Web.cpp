@@ -1584,7 +1584,8 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		glass3::util::Logger::log(
 				"error",
 				"CWeb::addSiteToNode: No valid travel times for site "
-						+ newSite->getSCNL() + " in web " + m_sName
+						+ newSite->getSCNL() + " distance " + std::to_string(distance)
+						+ " in web " + m_sName
 						+ ".");
 
 		return(false);
@@ -1595,8 +1596,8 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 						travelTime2, phase2) == false) {
 		glass3::util::Logger::log(
 				"error",
-				"CWeb::addSiteToNode: Failed to add station "
-						+ newSite->getSCNL() + " to web " + m_sName
+				"CWeb::addSiteToNode: Failed to link site "
+						+ newSite->getSCNL() + " to node for web " + m_sName
 						+ ".");
 		return(false);
 	}
