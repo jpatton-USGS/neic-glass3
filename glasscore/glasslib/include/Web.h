@@ -255,10 +255,31 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * the distance between the given location and the site as part of the
 	 * std::pair in vSite.
 	 *
-	 * \param lat - A double varible containing the latitude to use
-	 * \param lon - A double varible containing the longitude to use
+	 * \param lat - A double variable containing the latitude to use
+	 * \param lon - A double variable containing the longitude to use
 	 */
 	void sortSiteListForNode(double lat, double lon);
+
+	/**
+	 * \brief Get site from list
+	 *
+	 * This function gets the distance / site pair from the list as identified 
+	 * by the provided index.
+	 *
+	 * \param index - An integer containing the desired index
+	 * \return - A pair containing the distance and site
+	 */
+	std::pair<double, std::shared_ptr<CSite>> getSiteFromSiteList(int index);
+
+	/**
+	 * \brief Get size of site list
+	 *
+	 * This function gets the number of distance / site pairs currently in the 
+	 * site list
+	 *
+	 * \return - A int containing the size of the site list
+	 */
+	int getSiteListSize();
 
 	/**
 	 * \brief Create new node
@@ -298,6 +319,36 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	std::shared_ptr<CNode> generateNodeSites(std::shared_ptr<CNode> node);
 
 	/**
+	 * \brief Add site to node
+	 * This function adds the the given site to the given node
+	 *
+	 * \param newSite - A shared pointer to a CSite object containing the site to
+	 * add 
+	 * \param node - A shared pointer to a CNode object containing the node to
+	 * modify 
+	 * \param sort - A boolean flag indicating whether to sort the node site list
+	 * after adding, defaults to true.
+	 * \param reInitTT - A boolean flag indicating whether to reinit the travel 
+	 * times to the current node, defaults to true.
+	 * \return returns true if successful, false otherwise
+	 */
+	bool addSiteToNode(std::shared_ptr<CSite> newSite, std::shared_ptr<CNode> node,
+	 bool sort = true, bool reInitTT = true);
+
+	/**
+	 * \brief Check to see if site allowed
+	 * This function checks to see if a given site is allowed in the web by
+	 * checking the given site against the configured site filters
+	 *
+	 * \param site - A shared pointer to a CSite object containing the site to
+	 * check
+	 * \param checkEnabled - A bool indicating whether to check the site
+	 * enabled and use flags, default true
+	 * \return returns true if it is allowed, false otherwise
+	 */
+	bool isSiteAllowed(std::shared_ptr<CSite> site, bool checkEnabled = true);
+
+	/**
 	 * \brief Add site to this web
 	 * This function adds the given site to the list of nodes linked to this
 	 * web and restructure node site lists
@@ -325,17 +376,6 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * check
 	 */
 	bool hasSite(std::shared_ptr<CSite> site);
-
-	/**
-	 * \brief Check to see if site allowed
-	 * This function checks to see if a given site is allowed in the web by
-	 * checking the given site against the configured site filters
-	 *
-	 * \param site - A shared pointer to a CSite object containing the site to
-	 * check
-	 * \return returns true if it is allowed, false otehrwise
-	 */
-	bool isSiteAllowed(std::shared_ptr<CSite> site);
 
 	/**
 	 * \brief add a job
@@ -449,7 +489,7 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	/**
 	 * \brief Gets the flag indicating whether this web should only use sites
 	 * flagged as UseForTeleseismic
-	 * \return Returns a boolean flag indicating hether this web should only
+	 * \return Returns a boolean flag indicating whether this web should only
 	 * use sites  lagged as UseForTeleseismic
 	 */
 	bool getUseOnlyTeleseismicStations() const;
@@ -591,9 +631,22 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	std::shared_ptr<traveltime::CTravelTime> m_pNucleationTravelTime2;
 
 	/**
-	 * \brief A mutex to control threading access to vSite.
+	 * \brief A recursive_mutex to control threading access to traveltimes.
+	 * NOTE: recursive mutexes are frowned upon, so maybe redesign around it
+	 * see: http://www.codingstandard.com/rule/18-3-3-do-not-use-stdrecursive_mutex/
+	 * However a recursive_mutex allows us to maintain the original class
+	 * design as delivered by the contractor.
 	 */
-	std::mutex m_vSiteMutex;
+	mutable std::recursive_mutex m_travelTimeMutex;
+
+	/**
+	 * \brief A recursive_mutex to control threading access to vSite.
+	 * NOTE: recursive mutexes are frowned upon, so maybe redesign around it
+	 * see: http://www.codingstandard.com/rule/18-3-3-do-not-use-stdrecursive_mutex/
+	 * However a recursive_mutex allows us to maintain the original class
+	 * design as delivered by the contractor.
+	 */
+	mutable std::recursive_mutex m_vSiteMutex;
 
 	/**
 	 * \brief the std::queue of std::function<void() jobs

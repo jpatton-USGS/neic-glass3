@@ -218,7 +218,7 @@ TEST(WebListTest, SiteOperations) {
 	ASSERT_FALSE(testWebList->hasSite(sharedRemoveSite))<< "site removed";
 }
 
-// Tests various falure cases for weblist
+// Tests various failure cases for weblist
 TEST(WebListTest, FailTests) {
 	glass3::util::Logger::disable();
 
