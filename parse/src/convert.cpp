@@ -562,11 +562,6 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 		return ("");
 	}
 
-	glass3::util::Logger::log(
-			"debug",
-			"siteListToStationList(): data = |" + json::Serialize(*data)
-					+ "|.");
-
 	// get the site list from the SuperEasyJSON message
 	//
 	json::Array siteListArray = (*data)["SiteList"];

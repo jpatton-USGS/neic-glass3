@@ -339,7 +339,7 @@ public class App {
               // if the row entry is less than or equal to zero, use the
               // default "no data" indicator
               if (rowEntry <= 0) {
-                rowEntry = INVALID_TRAVEL_TIME;
+                rowEntry = 0.0; // INVALID_TRAVEL_TIME;
               }
 
               // remember the phase used to generate the tt file (for debug file)
