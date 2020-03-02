@@ -174,10 +174,10 @@ void CWebList::updateSite(std::shared_ptr<CSite> site) {
 			"debug",
 			"CWebList::updateSite: Updating station " + site->getSCNL() + ".");
 
-	// Update all web node site lists that might be changed
-	// by the addition of this site note that we ignore the
+	// Update all webs that might be changed
+	// by the update of this site, note that we ignore the
 	// use and enabled flags here since we're updating a site (which might be
-	// unused or disabled)
+	// becoming unused or disabled)
 	for (auto &web : m_vWebs) {
 		if (web->getUpdate() == true) {
 			if (web->isSiteAllowed(site, false) == true) {

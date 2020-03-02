@@ -1503,7 +1503,8 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 	}
 	// check nDetect
 	if (m_iNumStationsPerNode == 0) {
-		glass3::util::Logger::log("error", "CWeb::genNodeSites: nDetect is 0.");
+		glass3::util::Logger::log("error", "CWeb::genNodeSites: num "
+			"stations per node is 0.");
 		return (node);
 	}
 
@@ -1515,7 +1516,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 
 	int sitesAllowed = m_iNumStationsPerNode;
 	int sitesAvailable = getSiteListSize();
-	if (sitesAvailable < m_iNumStationsPerNode) {
+	if (sitesAvailable < sitesAllowed) {
 		glass3::util::Logger::log("warning",
 									"CWeb::genNodeSites: the number of sites allowed ("
 									+ std::to_string(sitesAllowed) +
@@ -1553,7 +1554,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 		}
 	}
 
-	// sort the site links
+	// sort the site links in ascending distance
 	node->sortSiteLinks();
 
 	// done with node
@@ -1610,7 +1611,7 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		}
 	}
 
-	// compute traveltimes between site and node using distance
+	// compute traveltime(s) between site and node using distance
 	double travelTime1 = traveltime::CTravelTime::k_dTravelTimeInvalid;
 	std::string phase1 = traveltime::CTravelTime::k_dPhaseInvalid;
 	if (m_pNucleationTravelTime1 != NULL) {
@@ -1694,12 +1695,12 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	if (site->getUse() == true) {
 		glass3::util::Logger::log(
 			"debug",
-			"CWeb::addSite: Trying to add/update station " + site->getSCNL()
+			"CWeb::updateSite: Trying to add/update site " + site->getSCNL()
 					+ " in web: " + m_sName + ".");
 	} else {
 		glass3::util::Logger::log(
 			"debug",
-			"CWeb::addSite: Trying to remove station " + site->getSCNL()
+			"CWeb::updateSite: Trying to remove site " + site->getSCNL()
 					+ " from web: " + m_sName + ".");
 	}
 
