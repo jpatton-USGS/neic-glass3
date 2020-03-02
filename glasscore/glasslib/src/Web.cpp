@@ -1710,7 +1710,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 
 	// unlikely at this point that the node list would be
 	// modified, but...
-	std::lock_guard<std::mutex> vNodeGuard(m_vNodeMutex);
+	// std::lock_guard<std::mutex> vNodeGuard(m_vNodeMutex);
 
 	// for each node in web
 	for (auto &node : m_vNode) {
@@ -1756,7 +1756,14 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 
 		// resort the site list for the current node, also lock the site list
 		// so no one else messes with it
-		std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
+		while (m_vSiteMutex.try_lock() == false) {
+			// update thread status
+			setThreadHealth(true);
+
+			// wait a little while
+			std::this_thread::sleep_for(
+					std::chrono::milliseconds(getSleepTime()));
+		}
 		sortSiteListForNode(node->getLatitude(), node->getLongitude());
 
 		// its easier to just regenerate the node links than rat through
@@ -1766,6 +1773,8 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 
 		// we've modified a node
 		nodeModCount++;
+
+		m_vSiteMutex.unlock();
 
 		// modding by 1000 ensures we don't get that many log entries
 		if (nodeCount % 1000 == 0) {
