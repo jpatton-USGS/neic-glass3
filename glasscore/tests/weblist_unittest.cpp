@@ -19,8 +19,8 @@
 
 #define REMWEB "{\"Cmd\":\"RemoveWeb\",\"Name\":\"TestGrid\"}"
 
-#define ADDSITE "{\"Elevation\":302.000000,\"Enable\":true,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Latitude\":35.656729,\"Longitude\":-97.609276,\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"BCOK\"},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
-#define REMOVESITE "{\"Elevation\":378.000000,\"Enable\":false,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Latitude\":35.356842,\"Longitude\":-97.656074,\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"CCOK\"},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
+#define ADDSITE "{\"Enable\":true,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"BCOK\",\"Elevation\":302.000000,\"Latitude\":35.656729,\"Longitude\":-97.609276},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
+#define REMOVESITE "{\"Enable\":false,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"CCOK\",\"Elevation\":378.000000,\"Latitude\":35.356842,\"Longitude\":-97.656074},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
 
 // tests to see if the weblist can be constructed
 TEST(WebListTest, Construction) {
@@ -188,7 +188,7 @@ TEST(WebListTest, SiteOperations) {
 
 	// add to site list
 	testSiteList->addSite(sharedAddSite);
-	testWebList->addSite(sharedAddSite);
+	testWebList->updateSite(sharedAddSite);
 
 	// give time for site to add
 	std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -209,7 +209,7 @@ TEST(WebListTest, SiteOperations) {
 	ASSERT_TRUE(testWebList->hasSite(sharedRemoveSite))<< "site in weblist";
 
 	// remove
-	testWebList->removeSite(sharedRemoveSite);
+	testWebList->updateSite(sharedRemoveSite);
 
 	// give time for site to remove
 	std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -228,6 +228,5 @@ TEST(WebListTest, FailTests) {
 	ASSERT_FALSE(testWebList->receiveExternalMessage(NULL))<< "Null dispatch false";
 	ASSERT_FALSE(testWebList->addWeb(NULL))<< "Null addWeb false";
 	ASSERT_FALSE(testWebList->removeWeb(NULL))<< "Null removeWeb false";
-	testWebList->removeSite(NULL);
-	testWebList->addSite(NULL);
+	testWebList->updateSite(NULL);
 }

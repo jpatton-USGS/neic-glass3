@@ -349,23 +349,13 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	bool isSiteAllowed(std::shared_ptr<CSite> site, bool checkEnabled = true);
 
 	/**
-	 * \brief Add site to this web
-	 * This function adds the given site to the list of nodes linked to this
-	 * web and restructure node site lists
+	 * \brief Update site in this web
+	 * This function adds/removes/updates the given site in the list of nodes 
+	 * linked to this web and restructures the node site lists
 	 *
 	 * \param site - A shared_ptr to a CSite object containing the site to add
 	 */
-	void addSite(std::shared_ptr<CSite> site);
-
-	/**
-	 * \brief Remove site from this web
-	 * This function removes the given site to the list of nodes linked to this
-	 * web and restructure node site lists
-	 *
-	 * \param site - A shared pointer to a CSite object containing the site to
-	 * remove
-	 */
-	void removeSite(std::shared_ptr<CSite> site);
+	void updateSite(std::shared_ptr<CSite> site);
 
 	/**
 	 * \brief Check if this web has a site
@@ -538,6 +528,13 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	std::atomic<bool> m_bUseOnlyTeleseismicStations;
 
 	/**
+	 * \brief A double value containing the minimum quality required to use a 
+	 * station in this web. This needs to be saved to support dynamic addition
+	 * and removal of sites as their usage status is changed.
+	 */
+	std::atomic<double> m_dQualityFilter;
+
+	/**
 	 * \brief A std::vector containing a std::pair for each the sites to use
 	 * in node generation and the distance to the current node location.
 	 * vSite is populated by genSiteList(), and sorted by sortSiteList() (which
@@ -663,6 +660,7 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * zonestats
 	 */
 	std::string m_sZoneStatsFileName;
+
 	/**
 	 * \brief shared pointer to ZoneStats info
 	 */
@@ -695,7 +693,7 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	static constexpr double k_dFibonacciRatio = 1.6180339888;
 
 	/**
-	 * \briefThe index of the latitude for explicit grids
+	 * \brief The index of the latitude for explicit grids
 	 */
 	static const int k_iNodeLatitudeIndex = 0;
 

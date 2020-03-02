@@ -55,7 +55,7 @@
 
 #define GRIDNAME "TestGrid"
 #define GRIDTHRESH 0.5
-#define GRIDNUMDETECT 10
+#define GRIDNUMDETECT 30
 #define GRIDNUMNUCLEATE 6
 #define GRIDRESOLUTION 25.0
 #define GRIDNUMNODES 2601
@@ -70,8 +70,8 @@
 #define PHASE1 "P"
 #define PHASE2 "S"
 
-#define ADDSITE "{\"Elevation\":302.000000,\"Enable\":true,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Latitude\":35.656729,\"Longitude\":-97.609276,\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"BCOK\"},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
-#define REMOVESITE "{\"Elevation\":378.000000,\"Enable\":false,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Latitude\":35.356842,\"Longitude\":-97.656074,\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"CCOK\"},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
+#define ADDSITE "{\"Enable\":true,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"BCOK\",\"Elevation\":302.000000,\"Latitude\":35.656729,\"Longitude\":-97.609276},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
+#define REMOVESITE "{\"Enable\":false,\"InformationRequestor\":{\"AgencyID\":\"US\",\"Author\":\"station-lookup-app\"},\"Quality\":1.000000,\"Site\":{\"Channel\":\"HHZ\",\"Location\":\"--\",\"Network\":\"OK\",\"Station\":\"CCOK\",\"Elevation\":378.000000,\"Latitude\":35.356842,\"Longitude\":-97.656074},\"Type\":\"StationInfo\",\"UseForTeleseismic\":true}" // NOLINT
 
 // tests to see if the web can be constructed
 TEST(WebTest, Construction) {
@@ -536,6 +536,9 @@ TEST(WebTest, AddTest) {
 	glasscore::CSite * addSite = new glasscore::CSite(siteJSON);
 	std::shared_ptr<glasscore::CSite> sharedAddSite(addSite);
 
+	// glass3::util::Logger::log_init("webtest", "debug", ".", true);
+	// glass3::util::Logger::enable();
+
 	// add to site list
 	testSiteList->addSite(sharedAddSite);
 
@@ -543,7 +546,7 @@ TEST(WebTest, AddTest) {
 	ASSERT_FALSE(testGridWeb.hasSite(sharedAddSite))<< "site not in grid";
 
 	// add to grid
-	testGridWeb.addSite(sharedAddSite);
+	testGridWeb.updateSite(sharedAddSite);
 
 	// check to see if this site is in grid
 	ASSERT_TRUE(testGridWeb.hasSite(sharedAddSite))<< "site added";
@@ -602,7 +605,7 @@ TEST(WebTest, RemoveTest) {
 	ASSERT_TRUE(testGridWeb.hasSite(sharedRemoveSite))<< "site in grid";
 
 	// remove from grid
-	testGridWeb.removeSite(sharedRemoveSite);
+	testGridWeb.updateSite(sharedRemoveSite);
 
 	// check to see if this site is in grid
 	ASSERT_FALSE(testGridWeb.hasSite(sharedRemoveSite))<< "site removed";

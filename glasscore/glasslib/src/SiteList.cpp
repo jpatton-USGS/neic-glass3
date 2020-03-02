@@ -224,20 +224,15 @@ bool CSiteList::addSite(std::shared_ptr<CSite> site) {
 	if (oldSite) {
 		// update existing site
 		oldSite->update(site.get());
-
-		// pass updated site to webs
-		if (CGlass::getWebList()) {
-			CGlass::getWebList()->addSite(oldSite);
-		}
 	} else {
 		// add new site to list and map
 		m_vSite.push_back(site);
 		m_mSite[site->getSCNL()] = site;
+	}
 
-		// pass new site to webs
-		if (CGlass::getWebList()) {
-			CGlass::getWebList()->addSite(site);
-		}
+	// pass updated site to webs
+	if (CGlass::getWebList()) {
+		CGlass::getWebList()->updateSite(oldSite);
 	}
 
 	// what time is it
@@ -530,7 +525,7 @@ glass3::util::WorkState CSiteList::work() {
 
 			// remove site from webs
 			if (CGlass::getWebList()) {
-				CGlass::getWebList()->removeSite(aSite);
+				CGlass::getWebList()->updateSite(aSite);
 			}
 		}
 
@@ -597,7 +592,7 @@ glass3::util::WorkState CSiteList::work() {
 
 			// add site to webs
 			if (CGlass::getWebList()) {
-				CGlass::getWebList()->addSite(aSite);
+				CGlass::getWebList()->updateSite(aSite);
 			}
 		}
 
