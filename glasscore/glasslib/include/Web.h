@@ -257,8 +257,9 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 *
 	 * \param lat - A double variable containing the latitude to use
 	 * \param lon - A double variable containing the longitude to use
+	 * \param depth - A double variable containing the depth to use
 	 */
-	void sortSiteListForNode(double lat, double lon);
+	void sortSiteListForNode(double lat, double lon, double depth);
 
 	/**
 	 * \brief Get site from list
@@ -326,14 +327,10 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * add 
 	 * \param node - A shared pointer to a CNode object containing the node to
 	 * modify 
-	 * \param sort - A boolean flag indicating whether to sort the node site list
-	 * after adding, defaults to true.
-	 * \param reInitTT - A boolean flag indicating whether to reinit the travel 
-	 * times to the current node, defaults to true.
 	 * \return returns true if successful, false otherwise
 	 */
-	bool addSiteToNode(std::shared_ptr<CSite> newSite, std::shared_ptr<CNode> node,
-	 bool sort = true, bool reInitTT = true);
+	bool addSiteToNode(std::shared_ptr<CSite> newSite,
+		std::shared_ptr<CNode> node);
 
 	/**
 	 * \brief Check to see if site allowed
