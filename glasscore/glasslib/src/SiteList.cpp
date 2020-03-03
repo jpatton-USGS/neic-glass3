@@ -454,7 +454,7 @@ glass3::util::WorkState CSiteList::work() {
 	// check every hour
 	// NOTE: hardcoded to one hour, any more often seemed excessive
 	// didn't seem like a parameter that would be changed
-	if ((tNow - m_tLastChecked) < (1 * k_nHoursToSeconds)) {
+	if ((tNow - m_tLastChecked) <= (1 * k_nHoursToSeconds)) {
 		// no
 		return (glass3::util::WorkState::Idle);
 	}
@@ -487,7 +487,7 @@ glass3::util::WorkState CSiteList::work() {
 
 			// have we not seen data?
 			if ((tNow - tLastPickAdded)
-					> (k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
+					>= (k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
 				glass3::util::Logger::log(
 						"debug",
 						"CSiteList::work: Removing " + aSite->getSCNL()
@@ -553,7 +553,7 @@ glass3::util::WorkState CSiteList::work() {
 
 			// have we seen data?
 			if ((tNow - tLastPickAdded)
-					< (k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
+					<= (k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
 				glass3::util::Logger::log(
 						"debug",
 						"CSiteList::work: Added " + aSite->getSCNL()
