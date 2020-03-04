@@ -623,14 +623,6 @@ void CSite::addNode(std::shared_ptr<CNode> node, double distDeg,
 									"CSite::addNode: NULL CNode provided.");
 		return;
 	}
-	// check travel times
-	/*
-	 if ((travelTime1 < 0) && (travelTime2 < 0)) {
-	 glass3::util::Logger::log("error",
-	 "CSite::addNode: No valid travel times.");
-	 return;
-	 }
-	 */
 
 	// add node link to vector of nodes linked to this site
 	// NOTE: no duplication check, but multiple nodes from the

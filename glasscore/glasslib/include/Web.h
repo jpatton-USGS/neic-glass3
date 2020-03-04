@@ -262,17 +262,6 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	void sortSiteListForNode(double lat, double lon, double depth);
 
 	/**
-	 * \brief Get site from list
-	 *
-	 * This function gets the distance / site pair from the list as identified 
-	 * by the provided index.
-	 *
-	 * \param index - An integer containing the desired index
-	 * \return - A pair containing the distance and site
-	 */
-	std::pair<double, std::shared_ptr<CSite>> getSiteFromSiteList(int index);
-
-	/**
 	 * \brief Get size of site list
 	 *
 	 * This function gets the number of distance / site pairs currently in the 

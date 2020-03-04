@@ -896,7 +896,9 @@ void output::writeOutput(std::shared_ptr<json::Object> data) {
 		std::string detectionString = glass3::parse::hypoToJSONDetection(
 				data, agency, author);
 
-		sendOutput("Detection", ID, detectionString);
+		if (detectionString != "") {
+			sendOutput("Detection", ID, detectionString);
+		}
 	} else if (dataType == "Cancel") {
 		// convert a cancel to a retract
 		std::string retractString = glass3::parse::cancelToJSONRetract(data,
@@ -910,13 +912,17 @@ void output::writeOutput(std::shared_ptr<json::Object> data) {
 				glass3::parse::siteLookupToStationInfoRequest(data, agency,
 																author);
 
-		sendOutput("StationInfoRequest", ID, stationInfoRequestString);
+		if (stationInfoRequestString != "") {
+			sendOutput("StationInfoRequest", ID, stationInfoRequestString);
+		}
 	} else if (dataType == "SiteList") {
 		// convert a site list to a station list
 		std::string stationListString = glass3::parse::siteListToStationList(
 				data);
 
-		sendOutput("StationList", ID, stationListString);
+		if (stationListString != "") {
+			sendOutput("StationList", ID, stationListString);
+		}
 	} else {
 		return;
 	}

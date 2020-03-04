@@ -10,6 +10,7 @@
 #include <json.h>
 #include <geo.h>
 #include <memory>
+#include <mutex>
 #include <vector>
 #include <string>
 
@@ -291,6 +292,15 @@ class CTravelTime {
 	 * geographic location. Set by setOrigin()
 	 */
 	glass3::util::Geo m_geoTTOrigin;
+
+	/**
+	 * \brief the std::mutex for accessing depth
+	 * NOTE: recursive mutexes are frowned upon, so maybe redesign around it
+	 * see: http://www.codingstandard.com/rule/18-3-3-do-not-use-stdrecursive_mutex/
+	 * However a recursive_mutex allows us to maintain the original class
+	 * design as delivered by the contractor.
+	 */
+	mutable std::recursive_mutex m_DepthMutex;
 
 	// constants
 	/**

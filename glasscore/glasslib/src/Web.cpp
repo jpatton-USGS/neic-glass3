@@ -226,7 +226,8 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 		json::Array zarray = (*gridConfiguration)["DepthLayers"].ToArray();
 		for (auto v : zarray) {
 			if (v.GetType() == json::ValueType::DoubleVal) {
-				depthLayerArray.push_back(v.ToDouble());
+				double depth = v.ToDouble();
+				depthLayerArray.push_back(depth);
 			}
 		}
 		numDepthLayers = static_cast<int>(depthLayerArray.size());
@@ -306,14 +307,6 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			// check to see if Z is below the maximum depth
 			if (z >= std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
 				bReachedMaxDepth = true;
-				/*
-				 glass3::util::Logger::log(
-				 "debug",
-				 "CWeb::generateGlobalGrid:  Truncated shell depth to "
-				 + std::to_string(dMaxNodeDepth)
-				 + " for Lat/Lon " + std::to_string(aLat) + "/"
-				 + std::to_string(aLon));
-				 */
 				z = dMaxNodeDepth;
 			}
 
@@ -1354,8 +1347,12 @@ bool CWeb::loadWebSiteList() {
 		return (false);
 	}
 
+	// git all the sites in pSiteList
+	std::vector<std::shared_ptr<CSite>> siteList =
+			m_pSiteList->getListOfSites();
+
 	// get the total number sites in glass's site list
-	int nsite = m_pSiteList->size();
+	int nsite = siteList.size();
 
 	// don't bother continuing if we have no sites
 	if (nsite <= 0) {
@@ -1377,19 +1374,18 @@ bool CWeb::loadWebSiteList() {
 	// update thread status
 	setThreadHealth(true);
 
-	std::vector<std::shared_ptr<CSite>> siteList =
-			m_pSiteList->getListOfSites();
-
 	// for each site
 	for (std::vector<std::shared_ptr<CSite>>::iterator it = siteList.begin();
 			it != siteList.end(); ++it) {
 		// get site from the overall site list
 		std::shared_ptr<CSite> site = *it;
 
+		// nullcheck
 		if (site == NULL) {
 			continue;
 		}
 
+		// if this site meets our criteria, add it to the sorted list
 		if (isSiteAllowed(site)) {
 			m_vSitesSortedForCurrentNode.push_back(
 					std::pair<double, std::shared_ptr<CSite>>(0.0, site));
@@ -1398,7 +1394,7 @@ bool CWeb::loadWebSiteList() {
 
 	// log
 	snprintf(sLog, sizeof(sLog),
-				"CWeb::loadWebSiteList: %d sites selected for web %s",
+				"CWeb::loadWebSiteList: selected %d allowed sites for web %s",
 				getSiteListSize(), m_sName.c_str());
 	glass3::util::Logger::log("debug", sLog);
 
@@ -1408,52 +1404,39 @@ bool CWeb::loadWebSiteList() {
 // ---------------------------------------------------------sortSiteListForNode
 void CWeb::sortSiteListForNode(double lat, double lon, double depth) {
 	std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
+
 	// set to provided geographic location
 	glass3::util::Geo geo;
+	geo.setGeographic(lat, lon, glass3::util::Geo::k_EarthRadiusKm - depth);
 
-	// NOTE: node depth is ignored here
-	geo.setGeographic(lat, lon, depth);
+	// compute the distance to each site
+	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
+		= m_vSitesSortedForCurrentNode.begin();
+		it != m_vSitesSortedForCurrentNode.end(); ++it) {
+		// get the site distance pair
+		auto sitePair = *it;
 
-	// set the distance to each site
-	for (int i = 0; i < getSiteListSize(); i++) {
-		// get the site
-		auto p = getSiteFromSiteList(i);
-		if (p.second == NULL) {
+		// get the site from the second part of the pair
+		std::shared_ptr<CSite> site = sitePair.second;
+
+		// nullcheck
+		if (site == NULL) {
 			continue;
 		}
 
-		std::shared_ptr<CSite> site = p.second;
-
 		// compute the distance
-		p.first = site->getDelta(&geo);
+		sitePair.first = site->getDelta(&geo);
 
 		// set the distance in the vector
-		m_vSitesSortedForCurrentNode[i] = p;
+		*it = sitePair;
 	}
 
 	// update thread status
 	setThreadHealth(true);
 
-	// sort sites
+	// sort site distance pair list
 	std::sort(m_vSitesSortedForCurrentNode.begin(),
 				m_vSitesSortedForCurrentNode.end(), sortSite);
-}
-
-// ---------------------------------------------------------getSiteFromSiteList
-std::pair<double, std::shared_ptr<CSite>> CWeb::getSiteFromSiteList(int index) {
-	std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
-
-	std::pair<double, std::shared_ptr<CSite>> siteToReturn;
-
-	// make sure we've not run off the end of the vector
-	if (index >= getSiteListSize()) {
-		siteToReturn.first = -1;
-		siteToReturn.second = NULL;
-	} else {
-		siteToReturn = m_vSitesSortedForCurrentNode[index];
-	}
-
-	return(siteToReturn);
 }
 
 // ---------------------------------------------------------getSiteListSize
@@ -1584,17 +1567,37 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 											node->getDepth());
 	}
 
-	// for the number of allowed sites per node
-	for (int i = 0; i < sitesAllowed; i++) {
-		// get each site
-		auto aSite = getSiteFromSiteList(i);
-		if (aSite.second == NULL) {
+	// for all the allowed sites (note we won't usually end up going through all
+	// of them)
+	int siteCount = 0;
+	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
+			= m_vSitesSortedForCurrentNode.begin();
+			it != m_vSitesSortedForCurrentNode.end(); ++it) {
+		// break out of loop if we've exceeded
+		// the number of allowed sites
+		if (siteCount > sitesAllowed) {
+			break;
+		}
+
+		// get the site distance pair
+		auto sitePair = *it;
+
+		// get the site from the second part of the pair
+		std::shared_ptr<CSite> site = sitePair.second;
+
+		// nullcheck site
+		if (site == NULL) {
+			// move on to the next site
 			continue;
 		}
 
 		// add current site to this node
-		if (addSiteToNode(aSite.second, node) == false) {
+		if (addSiteToNode(site, node) == false) {
+			// move on to the next site
 			continue;
+		} else {
+			// we've added a site
+			siteCount++;
 		}
 	}
 
@@ -1637,6 +1640,7 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 						+ newSite->getSCNL() + " for node "
 						+ std::to_string(node->getLatitude())
 						+ "," + std::to_string(node->getLongitude())
+						+ "," + std::to_string(node->getDepth())
 						+ " in web " + m_sName + ".");
 
 		return(false);
@@ -1667,6 +1671,7 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 						+ " at distance: " + std::to_string(distance)
 						+ " for node " + std::to_string(node->getLatitude())
 						+ "," + std::to_string(node->getLongitude())
+						+ "," + std::to_string(node->getDepth())
 						+ " in web " + m_sName + ".");
 
 		return(false);
@@ -1735,10 +1740,6 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	int nodeCount = 0;
 	int totalNodes = size();
 
-	// unlikely at this point that the node list would be
-	// modified, but...
-	// std::lock_guard<std::mutex> vNodeGuard(m_vNodeMutex);
-
 	// for each node in web
 	for (auto &node : m_vNode) {
 		nodeCount++;
@@ -1752,7 +1753,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 			// for the node i.e. not too far out,
 			glass3::util::Geo geo;
 			geo.setGeographic(node->getLatitude(), node->getLongitude(),
-								node->getDepth());
+								glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
 
 			// compute delta distance between site and node
 			double newDistance = glass3::util::GlassMath::k_RadiansToDegrees

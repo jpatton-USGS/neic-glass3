@@ -427,18 +427,18 @@ std::string hypoToJSONDetection(std::shared_ptr<json::Object> data,
 		if (detection.isvalid() == false) {
 			return ("");
 		}
+
+		// convert to string
+		rapidjson::Document detectiondocument;
+		outputString = detectionformats::ToJSONString(
+				detection.tojson(detectiondocument,
+									detectiondocument.GetAllocator()));
 	} catch (const std::exception &e) {
 		glass3::util::Logger::log(
 				"warning",
 				"hypoToJSONDetection: Problem building detection message: "
 						+ std::string(e.what()));
 	}
-
-	// convert to string
-	rapidjson::Document detectiondocument;
-	outputString = detectionformats::ToJSONString(
-			detection.tojson(detectiondocument,
-								detectiondocument.GetAllocator()));
 
 	// done
 	return (outputString);
@@ -500,7 +500,7 @@ std::string cancelToJSONRetract(std::shared_ptr<json::Object> data,
 
 	// build retract message
 	detectionformats::retract retract;
-
+	std::string outputString = "";
 	// since detection formats and glass3 use different json libraries,
 	// need to take the values out of the SuperEasyJSON object and add them
 	// to the detection formats object
@@ -514,17 +514,17 @@ std::string cancelToJSONRetract(std::shared_ptr<json::Object> data,
 		if (retract.isvalid() == false) {
 			return ("");
 		}
+
+		// convert to string
+		rapidjson::Document retractdocument;
+		outputString = detectionformats::ToJSONString(
+				retract.tojson(retractdocument, retractdocument.GetAllocator()));
 	} catch (const std::exception &e) {
 		glass3::util::Logger::log(
 				"warning",
 				"cancelToJSONRetract: Problem building retract message: "
 						+ std::string(e.what()));
 	}
-
-	// convert to string
-	rapidjson::Document retractdocument;
-	std::string outputString = detectionformats::ToJSONString(
-			retract.tojson(retractdocument, retractdocument.GetAllocator()));
 
 	// done
 	return (outputString);
@@ -562,93 +562,96 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 		return ("");
 	}
 
-	// get the site list from the SuperEasyJSON message
-	//
-	json::Array siteListArray = (*data)["SiteList"];
+	std::string outputString = "";
 
-	// Detection formats doesn't have a "StationInfoList" format, but it's
-	// simply an array of StationInfo messages, so build it using rapidJSON
-	rapidjson::Document stationList(rapidjson::kObjectType);
+	// since detection formats and glass3 use different json libraries,
+	// need to take the values out of the SuperEasyJSON object and add them
+	// to the detection formats object
+	try {
+		// get the site list from the SuperEasyJSON message
+		//
+		json::Array siteListArray = (*data)["SiteList"];
 
-	// must pass an allocator when the object may need to allocate memory
-	rapidjson::Document::AllocatorType& allocator = stationList.GetAllocator();
+		// Detection formats doesn't have a "StationInfoList" format, but it's
+		// simply an array of StationInfo messages, so build it using rapidJSON
+		rapidjson::Document stationList(rapidjson::kObjectType);
 
-	// create a rapidjson array
-	rapidjson::Value stationListArray(rapidjson::kArrayType);
+		// must pass an allocator when the object may need to allocate memory
+		rapidjson::Document::AllocatorType& allocator = stationList.GetAllocator();
 
-	// for each site in the array
-	for (int i = 0; i < siteListArray.size(); i++) {
-		// get the current site
-		json::Object siteObject = siteListArray[i];
+		// create a rapidjson array
+		rapidjson::Value stationListArray(rapidjson::kArrayType);
 
-		detectionformats::stationInfo stationObject;
+		// for each site in the array
+		for (int i = 0; i < siteListArray.size(); i++) {
+			// get the current site
+			json::Object siteObject = siteListArray[i];
 
-		// since detection formats and glass3 use different json libraries,
-		// need to take the values out of the SuperEasyJSON object and add them
-		// to the detection formats object
-		try {
-			// build stationInfo object
-			// first site sub-object
-			// station is required
-			stationObject.site.station = (siteObject)["Sta"].ToString();
+			detectionformats::stationInfo stationObject;
 
-			// comp is optional
-			if (siteObject.HasKey("Comp")) {
-				stationObject.site.channel = (siteObject)["Comp"].ToString();
-			}
 
-			// network is required
-			stationObject.site.network = (siteObject)["Net"].ToString();
+				// build stationInfo object
+				// first site sub-object
+				// station is required
+				stationObject.site.station = (siteObject)["Sta"].ToString();
 
-			// lcation is optional
-			if (siteObject.HasKey("Loc")) {
-				stationObject.site.location = (siteObject)["Loc"].ToString();
-			}
-
-			// site location
-			stationObject.site.latitude = (siteObject)["Lat"].ToDouble();
-			stationObject.site.longitude = (siteObject)["Lon"].ToDouble();
-			stationObject.site.elevation = (siteObject)["Z"].ToDouble();
-
-			// site quality metrics
-			stationObject.quality = (siteObject)["Qual"].ToDouble();
-			stationObject.enable = (siteObject)["Use"].ToBool();
-			stationObject.useforteleseismic =
-					(siteObject)["UseForTele"].ToBool();
-
-			// check for validity
-			if (stationObject.isvalid() == true) {
-				// add to array
-				rapidjson::Document stationJSON(rapidjson::kObjectType);
-				stationObject.tojson(stationJSON, allocator);
-				stationListArray.PushBack(stationJSON, allocator);
-			} else {
-				std::vector<std::string> errors = stationObject.geterrors();
-
-				std::string errorString = stationObject.site.station + "."
-					+ stationObject.site.network;
-				for (int errorCount = 0; errorCount < errors.size(); errorCount++) {
-					errorString += " " + errors[errorCount];
+				// comp is optional
+				if (siteObject.HasKey("Comp")) {
+					stationObject.site.channel = (siteObject)["Comp"].ToString();
 				}
 
-				glass3::util::Logger::log(
-					"warning",
-					"siteListToStationList: " + errorString);
-			}
-		} catch (const std::exception &e) {
-			glass3::util::Logger::log(
-					"warning",
-					"siteListToStationList: Problem building StationInfo message: "
-							+ std::string(e.what()));
+				// network is required
+				stationObject.site.network = (siteObject)["Net"].ToString();
+
+				// lcation is optional
+				if (siteObject.HasKey("Loc")) {
+					stationObject.site.location = (siteObject)["Loc"].ToString();
+				}
+
+				// site location
+				stationObject.site.latitude = (siteObject)["Lat"].ToDouble();
+				stationObject.site.longitude = (siteObject)["Lon"].ToDouble();
+				stationObject.site.elevation = (siteObject)["Z"].ToDouble();
+
+				// site quality metrics
+				stationObject.quality = (siteObject)["Qual"].ToDouble();
+				stationObject.enable = (siteObject)["Use"].ToBool();
+				stationObject.useforteleseismic =
+						(siteObject)["UseForTele"].ToBool();
+
+				// check for validity
+				if (stationObject.isvalid() == true) {
+					// add to array
+					rapidjson::Document stationJSON(rapidjson::kObjectType);
+					stationObject.tojson(stationJSON, allocator);
+					stationListArray.PushBack(stationJSON, allocator);
+				} else {
+					std::vector<std::string> errors = stationObject.geterrors();
+
+					std::string errorString = stationObject.site.station + "."
+						+ stationObject.site.network;
+					for (int errorCount = 0; errorCount < errors.size(); errorCount++) {
+						errorString += " " + errors[errorCount];
+					}
+
+					glass3::util::Logger::log(
+						"warning",
+						"siteListToStationList: " + errorString);
+				}
 		}
+
+		// Add the type and array to the message
+		stationList.AddMember(TYPE_KEY, "StationInfoList", allocator);
+		stationList.AddMember(STATIONLIST_KEY, stationListArray, allocator);
+
+		// convert to a string to return
+		outputString = detectionformats::ToJSONString(stationList);
+	} catch (const std::exception &e) {
+		glass3::util::Logger::log(
+				"warning",
+				"siteListToStationList: Problem building StationInfo message: "
+						+ std::string(e.what()));
 	}
-
-	// Add the type and array to the message
-	stationList.AddMember(TYPE_KEY, "StationInfoList", allocator);
-	stationList.AddMember(STATIONLIST_KEY, stationListArray, allocator);
-
-	// convert to a string to return
-	std::string outputString = detectionformats::ToJSONString(stationList);
 
 	// done
 	return (outputString);
@@ -742,23 +745,23 @@ std::string siteLookupToStationInfoRequest(std::shared_ptr<json::Object> data,
 		stationInfoRequest.site.location = loc;
 		stationInfoRequest.source.agencyid = outputAgencyID;
 		stationInfoRequest.source.author = outputAuthor;
+
+		// check if valid
+		if (stationInfoRequest.isvalid() == false) {
+			return ("");
+		}
+
+		// build string
+		rapidjson::Document requestdocument;
+		outputString = detectionformats::ToJSONString(
+				stationInfoRequest.tojson(requestdocument,
+											requestdocument.GetAllocator()));
 	} catch (const std::exception &e) {
 		glass3::util::Logger::log(
 				"warning",
 				"siteLookupToStationInfoRequest: Problem building station info "
 						"request message: " + std::string(e.what()));
 	}
-
-	// check if valid
-	if (stationInfoRequest.isvalid() == false) {
-		return ("");
-	}
-
-	// build string
-	rapidjson::Document requestdocument;
-	outputString = detectionformats::ToJSONString(
-			stationInfoRequest.tojson(requestdocument,
-										requestdocument.GetAllocator()));
 
 	// done
 	return (outputString);

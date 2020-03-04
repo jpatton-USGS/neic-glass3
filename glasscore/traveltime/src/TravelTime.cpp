@@ -22,6 +22,7 @@ CTravelTime::CTravelTime() {
 
 // ---------------------------------------------------------CTravelTime
 CTravelTime::CTravelTime(const CTravelTime &travelTime) {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
 	m_pTravelTimeArray = NULL;
 
 	clear();
@@ -55,6 +56,8 @@ CTravelTime::~CTravelTime() {
 
 // ---------------------------------------------------------clear
 void CTravelTime::clear() {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
+
 	m_iNumDistances = 0;
 	m_dMinimumDistance = 0;
 	m_dMaximumDistance = 0;
@@ -77,6 +80,7 @@ void CTravelTime::clear() {
 
 // -----------------------------------------------------writeToFile
 void CTravelTime::writeToFile(std::string fileName, double depth) {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
 	if (fileName == "") {
 		return;
 	}
@@ -142,6 +146,7 @@ void CTravelTime::writeToFile(std::string fileName, double depth) {
 
 // ---------------------------------------------------------setup
 bool CTravelTime::setup(std::string phase, std::string file) {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
 	// nullcheck
 	if (phase == CTravelTime::k_dPhaseInvalid) {
 		glass3::util::Logger::log("error",
@@ -163,7 +168,7 @@ bool CTravelTime::setup(std::string phase, std::string file) {
 	FILE *inFile = fopen(file.c_str(), "rb");
 	if (!inFile) {
 		glass3::util::Logger::log(
-				"debug", "CTravelTime::Setup: Cannot open file:" + file);
+				"error", "CTravelTime::Setup: Cannot open file:" + file);
 		return (false);
 	}
 
@@ -274,6 +279,8 @@ bool CTravelTime::setup(std::string phase, std::string file) {
 
 // ---------------------------------------------------------setOrigin
 void CTravelTime::setTTOrigin(double lat, double lon, double depth) {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
+
 	m_geoTTOrigin.setGeographic(lat, lon,
 								glass3::util::Geo::k_EarthRadiusKm - depth);
 	m_dDepth = depth;
@@ -281,6 +288,8 @@ void CTravelTime::setTTOrigin(double lat, double lon, double depth) {
 
 // ---------------------------------------------------------setOrigin
 void CTravelTime::setTTOrigin(const glass3::util::Geo &geoOrigin) {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
+
 	m_geoTTOrigin = geoOrigin;
 	// ditch dDepth in favor or
 	m_dDepth = glass3::util::Geo::k_EarthRadiusKm
@@ -289,6 +298,7 @@ void CTravelTime::setTTOrigin(const glass3::util::Geo &geoOrigin) {
 
 // ---------------------------------------------------------T
 double CTravelTime::T(glass3::util::Geo *geo) {
+	std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
 	// Calculate travel time given CGeo
 	m_dDelta = glass3::util::GlassMath::k_RadiansToDegrees
 			* m_geoTTOrigin.delta(geo);
@@ -298,58 +308,69 @@ double CTravelTime::T(glass3::util::Geo *geo) {
 
 // ---------------------------------------------------------T
 double CTravelTime::T(double delta) {
-	m_dDelta = delta;
+	try {
+		std::lock_guard<std::recursive_mutex> guard(m_DepthMutex);
 
-	// bounds checks
-	if((m_dDelta < m_dMinimumDistance) || (m_dDelta > m_dMaximumDistance)) {
-    return (k_dTravelTimeInvalid);
-	}
-	if((m_dDepth < m_dMinimumDepth) || (m_dDepth > m_dMaximumDepth)) {
-    return (k_dTravelTimeInvalid);
-	}
+		m_dDelta = delta;
 
-	double inDistance = m_dDelta;
-	double inDepth = m_dDepth;
+		// bounds checks
+		if((m_dDelta < m_dMinimumDistance) || (m_dDelta > m_dMaximumDistance)) {
+			return (k_dTravelTimeInvalid);
+		}
+		if((m_dDepth < m_dMinimumDepth) || (m_dDepth > m_dMaximumDepth)) {
+			return (k_dTravelTimeInvalid);
+		}
 
-	// calculate distance interpolation indexes and values
-	int distanceIndex1 = getIndexFromDistance(inDistance);
-	double distance1 = getDistanceFromIndex(distanceIndex1);
-	int distanceIndex2 = distanceIndex1 + 1;
-	double distance2 = getDistanceFromIndex(distanceIndex2);
+		double inDistance = m_dDelta;
+		double inDepth = m_dDepth;
 
-	// calculate depth interpolation indexes and values
-	int depthIndex1 = getIndexFromDepth(inDepth);
-	double depth1 = getDepthFromIndex(depthIndex1);
-	int depthIndex2 = depthIndex1 + 1;
-	double depth2 = getDepthFromIndex(depthIndex2);
+		// calculate distance interpolation indexes and values
+		int distanceIndex1 = getIndexFromDistance(inDistance);
+		double distance1 = getDistanceFromIndex(distanceIndex1);
+		int distanceIndex2 = distanceIndex1 + 1;
+		double distance2 = getDistanceFromIndex(distanceIndex2);
 
-	// lookup travel time interpolation values from using the indexes
-	double travelTime11 = T(distanceIndex1, depthIndex1);
-	double travelTime12 = T(distanceIndex1, depthIndex2);
-	double travelTime21 = T(distanceIndex2, depthIndex1);
-	double travelTime22 = T(distanceIndex2, depthIndex2);
+		// calculate depth interpolation indexes and values
+		int depthIndex1 = getIndexFromDepth(inDepth);
+		double depth1 = getDepthFromIndex(depthIndex1);
+		int depthIndex2 = depthIndex1 + 1;
+		double depth2 = getDepthFromIndex(depthIndex2);
 
-	// check travel time interpolation values
-	if ((travelTime11 < 0) || (travelTime12 < 0)
-		|| (travelTime21 < 0) || (travelTime22 < 0)) {
-		// no traveltime
+		// lookup travel time interpolation values from using the indexes
+		double travelTime11 = T(distanceIndex1, depthIndex1);
+		double travelTime12 = T(distanceIndex1, depthIndex2);
+		double travelTime21 = T(distanceIndex2, depthIndex1);
+		double travelTime22 = T(distanceIndex2, depthIndex2);
+
+		// check travel time interpolation values
+		if ((travelTime11 < 0) || (travelTime12 < 0)
+			|| (travelTime21 < 0) || (travelTime22 < 0)) {
+			// no traveltime
+			return (k_dTravelTimeInvalid);
+		}
+
+		// get traveltime via bilinear interpolation using the values and
+		// input distance/depth
+		double outTravelTime = bilinearInterpolation(
+			travelTime11, travelTime12, travelTime21, travelTime22,
+			distance1, depth1, distance2, depth2,
+			inDistance, inDepth);
+
+		// check final travel time
+		if (outTravelTime < 0) {
+			// no traveltime
+			return (k_dTravelTimeInvalid);
+		}
+
+		return (outTravelTime);
+	} catch (...) {
+		glass3::util::Logger::log(
+				"warning", "CTravelTime::T: Unknown error (exception) during "
+				"bilinear interpolation calculations, continuing");
+
+		// if ANYTHING goes wrong in these calculations we want to survive it
 		return (k_dTravelTimeInvalid);
 	}
-
-	// get traveltime via bilinear interpolation using the values and
-	// input distance/depth
-	double outTravelTime = bilinearInterpolation(
-		travelTime11, travelTime12, travelTime21, travelTime22,
-		distance1, depth1, distance2, depth2,
-		inDistance, inDepth);
-
-	// check final travel time
-	if (outTravelTime < 0) {
-		// no traveltime
-		return (k_dTravelTimeInvalid);
-	}
-
-	return (outTravelTime);
 }
 
 // ------------------------------------------------------getIndexFromDistance
