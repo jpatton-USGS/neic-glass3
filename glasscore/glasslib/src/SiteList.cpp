@@ -221,18 +221,21 @@ bool CSiteList::addSite(std::shared_ptr<CSite> site) {
 	std::lock_guard<std::recursive_mutex> guard(m_SiteListMutex);
 
 	// check if we already had this site
+	std::shared_ptr<CSite> updatedSite = NULL;
 	if (oldSite) {
-		// update existing site
+		// update existing site in list
 		oldSite->update(site.get());
+		updatedSite = oldSite;
 	} else {
 		// add new site to list and map
 		m_vSite.push_back(site);
 		m_mSite[site->getSCNL()] = site;
+		updatedSite = site;
 	}
 
 	// pass updated site to webs
 	if (CGlass::getWebList()) {
-		CGlass::getWebList()->updateSite(oldSite);
+		CGlass::getWebList()->updateSite(updatedSite);
 	}
 
 	// what time is it

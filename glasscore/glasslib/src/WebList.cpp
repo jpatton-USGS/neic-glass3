@@ -165,6 +165,11 @@ bool CWebList::removeWeb(std::shared_ptr<json::Object> com) {
 void CWebList::updateSite(std::shared_ptr<CSite> site) {
 	std::lock_guard<std::recursive_mutex> webListGuard(m_WebListMutex);
 
+	// nullcheck
+	if (site == NULL) {
+		return;
+	}
+
 	// Don't process adds before web definitions
 	if (m_vWebs.size() < 1) {
 		return;
