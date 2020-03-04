@@ -280,14 +280,14 @@ std::shared_ptr<CPick> CPickList::getDuplicate(double newTPick,
 				// check if sites match
 				if (newSCNL == currentSCNL) {
 					// if match is found, log and return true
-					glass3::util::Logger::log(
-							"warning",
-							"CPickList::checkDuplicate: Duplicate (window = "
-									+ std::to_string(tWindow) + ") : old:"
-									+ currentSCNL + " "
-									+ std::to_string(currentTPick)
-									+ " new(del):" + newSCNL + " "
-									+ std::to_string(newTPick));
+					// glass3::util::Logger::log(
+					// "warning",
+					// "CPickList::checkDuplicate: Duplicate (window = "
+					// + std::to_string(tWindow) + ") : old:"
+					// + currentSCNL + " "
+					// + std::to_string(currentTPick)
+					// + " new(del):" + newSCNL + " "
+					// + std::to_string(newTPick));
 					return (currentPick);
 				}
 			}
@@ -487,13 +487,13 @@ glass3::util::WorkState CPickList::work() {
 				CGlass::getHypoList()->appendToHypoProcessingQueue(hypo);
 			}
 
-			glass3::util::Logger::log(
-					"warning", "CPickList::work: Updated existing pick.");
+			// glass3::util::Logger::log(
+			// "warning", "CPickList::work: Updated existing pick.");
 		} else {
 			// ignore new pick (first pick wins)
-			glass3::util::Logger::log(
-					"warning",
-					"CPickList::work: Duplicate pick not passed in.");
+			// glass3::util::Logger::log(
+			// "warning",
+			// "CPickList::work: Duplicate pick not passed in.");
 		}
 
 		// cleanup

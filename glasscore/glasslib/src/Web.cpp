@@ -1747,6 +1747,17 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		// update thread status
 		setThreadHealth(true);
 
+		// lock the site list while we are regenerating the node
+		while ((m_vSiteMutex.try_lock() == false) &&
+					 (getTerminate() == false)) {
+			// update thread status
+			setThreadHealth(true);
+
+			// wait a little while
+			std::this_thread::sleep_for(
+					std::chrono::milliseconds(getSleepTime()));
+		}
+
 		// some optimization to avoid unneeded work
 		if (site->getUse() == true) {
 			// if we're an add / update check to make sure the new station is valid
@@ -1772,25 +1783,16 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 			// we're at max sites
 			if ((node->getSiteLinksCount() >= m_iNumStationsPerNode)
 					&& (newDistance > maxDistance)) {
+				m_vSiteMutex.unlock();
 				continue;
 			}
 		} else {
 			// don't bother if this node doesn't have this site, there's
 			// nothing to do here
 			if (node->getSite(site->getSCNL()) == NULL) {
+				m_vSiteMutex.unlock();
 				continue;
 			}
-		}
-
-		// lock the site list while we are regenerating the node
-		while ((m_vSiteMutex.try_lock() == false) &&
-					 (getTerminate() == false)) {
-			// update thread status
-			setThreadHealth(true);
-
-			// wait a little while
-			std::this_thread::sleep_for(
-					std::chrono::milliseconds(getSleepTime()));
 		}
 
 		// resort the site list for the current node,
