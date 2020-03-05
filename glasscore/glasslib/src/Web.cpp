@@ -1326,8 +1326,6 @@ bool CWeb::isSiteAllowed(std::shared_ptr<CSite> site, bool checkEnabled) {
 
 // ---------------------------------------------------------loadWebSiteList
 bool CWeb::loadWebSiteList() {
-	std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
-
 	// nullchecks
 	// check pSiteList
 	if (m_pSiteList == NULL) {
@@ -1357,6 +1355,13 @@ bool CWeb::loadWebSiteList() {
 	// m_sName.c_str());
 	// glass3::util::Logger::log("debug", sLog);
 
+	// lock the site list while we are rebuilding it
+	while ((m_vSiteMutex.try_lock() == false) &&
+					(getTerminate() == false)) {
+		// update thread status
+		setThreadHealth(true);
+	}
+
 	// clear web site list
 	m_vSitesSortedForCurrentNode.clear();
 
@@ -1380,6 +1385,8 @@ bool CWeb::loadWebSiteList() {
 					std::pair<double, std::shared_ptr<CSite>>(0.0, site));
 		}
 	}
+
+	m_vSiteMutex.unlock();
 
 	// log
 	// snprintf(sLog, sizeof(sLog),
