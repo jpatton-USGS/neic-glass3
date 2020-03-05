@@ -1742,6 +1742,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	int nodeCount = 0;
 	int totalNodes = size();
 
+	std::chrono::high_resolution_clock::time_point tStartTime =
+			std::chrono::high_resolution_clock::now();
+
 	// lock the site list while getting site list
 	while ((m_vSiteMutex.try_lock() == false) &&
 					(getTerminate() == false)) {
@@ -1849,19 +1852,27 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		}
 	}
 
+	std::chrono::high_resolution_clock::time_point tEndTime =
+			std::chrono::high_resolution_clock::now();
+
+	double updateTime =
+			std::chrono::duration_cast<std::chrono::duration<double>>(
+					tEndTime - tStartTime).count();
+
 	// log info if we've updated any node with this site
 	if (nodeModCount > 0) {
 		char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
 		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Station %s modified"
-					" %d node(s) in web: %s",
-					site->getSCNL().c_str(), nodeModCount, m_sName.c_str());
+					" %d node(s) in web: %s in %f seconds",
+					site->getSCNL().c_str(), nodeModCount, m_sName.c_str(), updateTime);
 		glass3::util::Logger::log("info", sLog);
 	} else {
 		glass3::util::Logger::log(
 				"debug",
 				"CWeb::updateSite: Station " + site->getSCNL()
 						+ " did not modify in any "
-						"nodes in web: " + m_sName + ".");
+						"nodes in web: " + m_sName + " in " + std::to_string(updateTime)
+						+ " seconds.");
 	}
 }
 
