@@ -115,7 +115,7 @@ void CWeb::clear() {
 	// clear sites
 	try {
 		m_vSiteMutex.lock();
-		m_vSitesSortedForCurrentNode.clear();
+		vWebSites.clear();
 	} catch (...) {
 		// ensure the vSite mutex is unlocked
 		m_vSiteMutex.unlock();
@@ -256,6 +256,23 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 				"CWeb::generateGlobalGrid: Calculated numNodes:%d;", numNodes);
 	glass3::util::Logger::log(sLog);
 
+	// lock the site list while getting site list
+	while ((m_vSiteMutex.try_lock() == false) &&
+					(getTerminate() == false)) {
+		// update thread status
+		setThreadHealth(true);
+
+		// wait a little while
+		std::this_thread::sleep_for(
+				std::chrono::milliseconds(getSleepTime()));
+	}
+
+	// grab a copy of the site vector for our use
+	std::vector<std::pair<double, std::shared_ptr<CSite>>>
+		sites(vWebSites);
+
+	m_vSiteMutex.unlock();
+
 	// create / open gridfile for saving
 	std::ofstream outfile;
 	std::ofstream outstafile;
@@ -313,19 +330,9 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			if (z > std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
 				break;
 			}
-			// lock the site list while creating a node
-			while ((m_vSiteMutex.try_lock() == false)  &&
-				 		 (getTerminate() == false)) {
-				// update thread status
-				setThreadHealth(true);
-
-				// wait a little while
-				std::this_thread::sleep_for(
-						std::chrono::milliseconds(getSleepTime()));
-			}
 
 			// sort site list for this vertex
-			sortSiteListForNode(aLat, aLon, z);
+			sites = sortSiteListForNode(aLat, aLon, z, sites);
 
 			// it would make a certain amount of sense here, to track
 			// the depth delta between this node and the vertically
@@ -336,8 +343,7 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			// during initial location.
 			// create node
 			std::shared_ptr<CNode> node = generateNode(aLat, aLon, z,
-														getNodeResolution());
-			m_vSiteMutex.unlock();
+														getNodeResolution(), sites);
 
 			// if we got a valid node, add it
 			if (addNode(node) == true) {
@@ -510,6 +516,23 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 	// middle column index, and the longitude distance
 	double lon0 = lon - (icol0 * lonDistance);
 
+	// lock the site list while getting site list
+	while ((m_vSiteMutex.try_lock() == false) &&
+					(getTerminate() == false)) {
+		// update thread status
+		setThreadHealth(true);
+
+		// wait a little while
+		std::this_thread::sleep_for(
+				std::chrono::milliseconds(getSleepTime()));
+	}
+
+	// grab a copy of the site vector for our use
+	std::vector<std::pair<double, std::shared_ptr<CSite>>>
+		sites(vWebSites);
+
+	m_vSiteMutex.unlock();
+
 	// create / open gridfile for saving
 	std::ofstream outfile;
 	std::ofstream outstafile;
@@ -564,24 +587,12 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 					break;
 				}
 
-				// lock the site list while generating a node
-				while ((m_vSiteMutex.try_lock() == false) &&
-				 			 (getTerminate() == false)) {
-					// update thread status
-					setThreadHealth(true);
-
-					// wait a little while
-					std::this_thread::sleep_for(
-							std::chrono::milliseconds(getSleepTime()));
-				}
-
 				// sort site list for this generateLocalGrid point
-				sortSiteListForNode(latrow, loncol, z);
+				sites = sortSiteListForNode(latrow, loncol, z, sites);
 
 				// generate this node
 				std::shared_ptr<CNode> node = generateNode(
-						latrow, loncol, z, getNodeResolution());
-				m_vSiteMutex.unlock();
+						latrow, loncol, z, getNodeResolution(), sites);
 
 				// if we got a valid node, add it
 				if (addNode(node) == true) {
@@ -712,6 +723,23 @@ bool CWeb::generateExplicitGrid(
 		return (false);
 	}
 
+	// lock the site list while getting site list
+	while ((m_vSiteMutex.try_lock() == false) &&
+					(getTerminate() == false)) {
+		// update thread status
+		setThreadHealth(true);
+
+		// wait a little while
+		std::this_thread::sleep_for(
+				std::chrono::milliseconds(getSleepTime()));
+	}
+
+	// grab a copy of the site vector for our use
+	std::vector<std::pair<double, std::shared_ptr<CSite>>>
+		sites(vWebSites);
+
+	m_vSiteMutex.unlock();
+
 	// create / open gridfile for saving
 	std::ofstream outfile;
 	std::ofstream outstafile;
@@ -736,27 +764,15 @@ bool CWeb::generateExplicitGrid(
 		double lon = nodes[i][k_iNodeLongitudeIndex];
 		double Z = nodes[i][k_iNodeDepthIndex];
 
-		// lock the site list while generating a node
-		while ((m_vSiteMutex.try_lock() == false) &&
-				 	 (getTerminate() == false)) {
-			// update thread status
-			setThreadHealth(true);
-
-			// wait a little while
-			std::this_thread::sleep_for(
-					std::chrono::milliseconds(getSleepTime()));
-		}
-
 		// sort site list
-		sortSiteListForNode(lat, lon, Z);
+		sites = sortSiteListForNode(lat, lon, Z, sites);
 
 		// don't do any maxdepth/zonestats checks here, since this grid is
 		// explicit
 
 		// create node, note resolution set to 0
 		std::shared_ptr<CNode> node = generateNode(lat, lon, Z,
-													getNodeResolution());
-		m_vSiteMutex.unlock();
+													getNodeResolution(), sites);
 
 		if (addNode(node) == true) {
 			iNodeCount++;
@@ -1363,7 +1379,7 @@ bool CWeb::loadWebSiteList() {
 	}
 
 	// clear web site list
-	m_vSitesSortedForCurrentNode.clear();
+	vWebSites.clear();
 
 	// update thread status
 	setThreadHealth(true);
@@ -1381,34 +1397,34 @@ bool CWeb::loadWebSiteList() {
 
 		// if this site meets our criteria, add it to the sorted list
 		if (isSiteAllowed(site)) {
-			m_vSitesSortedForCurrentNode.push_back(
+			vWebSites.push_back(
 					std::pair<double, std::shared_ptr<CSite>>(0.0, site));
 		}
 	}
 
-	m_vSiteMutex.unlock();
-
 	// log
 	// snprintf(sLog, sizeof(sLog),
 	// "CWeb::loadWebSiteList: selected %d allowed sites for web %s",
-	// getSiteListSize(), m_sName.c_str());
+	// vWebSites.size(), m_sName.c_str());
 	// glass3::util::Logger::log("debug", sLog);
+
+	m_vSiteMutex.unlock();
 
 	return (true);
 }
 
 // ---------------------------------------------------------sortSiteListForNode
-void CWeb::sortSiteListForNode(double lat, double lon, double depth) {
-	std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
-
+std::vector<std::pair<double, std::shared_ptr<CSite>>>
+	CWeb::sortSiteListForNode(double lat, double lon, double depth,
+		std::vector<std::pair<double, std::shared_ptr<CSite>>> sites) {
 	// set to provided geographic location
 	glass3::util::Geo geo;
 	geo.setGeographic(lat, lon, glass3::util::Geo::k_EarthRadiusKm - depth);
 
 	// compute the distance to each site
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
-		= m_vSitesSortedForCurrentNode.begin();
-		it != m_vSitesSortedForCurrentNode.end(); ++it) {
+		= sites.begin();
+		it != sites.end(); ++it) {
 		// get the site distance pair
 		auto sitePair = *it;
 
@@ -1431,20 +1447,14 @@ void CWeb::sortSiteListForNode(double lat, double lon, double depth) {
 	setThreadHealth(true);
 
 	// sort site distance pair list
-	std::sort(m_vSitesSortedForCurrentNode.begin(),
-				m_vSitesSortedForCurrentNode.end(), sortSite);
-}
+	std::sort(sites.begin(), sites.end(), sortSite);
 
-// ---------------------------------------------------------getSiteListSize
-int CWeb::getSiteListSize() {
-	std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
-	int size = static_cast<int>(m_vSitesSortedForCurrentNode.size());
-	return(size);
+	return(sites);
 }
 
 // ---------------------------------------------------------generateNode
 std::shared_ptr<CNode> CWeb::generateNode(double lat, double lon, double z,
-											double resol) {
+		double resol, std::vector<std::pair<double, std::shared_ptr<CSite>>> sites) {
 	// nullcheck
 	if ((m_pNucleationTravelTime1 == NULL)
 			&& (m_pNucleationTravelTime2 == NULL)) {
@@ -1452,6 +1462,7 @@ std::shared_ptr<CNode> CWeb::generateNode(double lat, double lon, double z,
 									"CWeb::genNode: No valid trav pointers.");
 		return (NULL);
 	}
+
 	double maxZ = m_dMaxDepth;
 	if (m_dDepthResolution != -1) {
 		maxZ = z + m_dDepthResolution;
@@ -1465,12 +1476,12 @@ std::shared_ptr<CNode> CWeb::generateNode(double lat, double lon, double z,
 
 	// return empty node if we don't
 	// have any sites
-	if (getSiteListSize() == 0) {
+	if (sites.size() == 0) {
 		return (node);
 	}
 
 	// generate the sites for the node
-	node = generateNodeSites(node);
+	node = generateNodeSites(node, sites);
 
 	// return the populated node
 	return (node);
@@ -1490,9 +1501,8 @@ bool CWeb::addNode(std::shared_ptr<CNode> node) {
 }
 
 // ---------------------------------------------------------generateNodeSites
-std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
-	std::lock_guard<std::recursive_mutex> guard(m_vSiteMutex);
-
+std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
+	std::vector<std::pair<double, std::shared_ptr<CSite>>> sites) {
 	// nullchecks
 	// check node
 	if (node == NULL) {
@@ -1508,7 +1518,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 		return (NULL);
 	}
 	// check sites
-	if (getSiteListSize() == 0) {
+	if (sites.size() == 0) {
 		glass3::util::Logger::log("error", "CWeb::genNodeSites: No sites.");
 		return (node);
 	}
@@ -1523,7 +1533,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 	setThreadHealth(true);
 
 	int sitesAllowed = m_iNumStationsPerNode;
-	int sitesAvailable = getSiteListSize();
+	int sitesAvailable = sites.size();
 	if (sitesAvailable < sitesAllowed) {
 		glass3::util::Logger::log("warning",
 									"CWeb::genNodeSites: the number of sites allowed ("
@@ -1534,41 +1544,18 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 		sitesAllowed = sitesAvailable;
 	}
 
-	// lock the travel times so it is constant while we build the node
-	while ((m_travelTimeMutex.try_lock() == false) &&
-				 (getTerminate() == false)) {
-		// update thread status
-		setThreadHealth(true);
-
-		// wait a little while
-		std::this_thread::sleep_for(
-				std::chrono::milliseconds(getSleepTime()));
-	}
-
 	// we're now modifying a node
 	node->setEnabled(false);
 
 	// clear node of any existing sites (on adds/removes/updates)
 	node->clearSiteLinks();
 
-	// setup traveltimes for this node
-	if (m_pNucleationTravelTime1 != NULL) {
-		m_pNucleationTravelTime1->setTTOrigin(node->getLatitude(),
-											node->getLongitude(),
-											node->getDepth());
-	}
-	if (m_pNucleationTravelTime2 != NULL) {
-		m_pNucleationTravelTime2->setTTOrigin(node->getLatitude(),
-											node->getLongitude(),
-											node->getDepth());
-	}
-
 	// for all the allowed sites (note we won't usually end up going through all
 	// of them)
 	int siteCount = 0;
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
-			= m_vSitesSortedForCurrentNode.begin();
-			it != m_vSitesSortedForCurrentNode.end(); ++it) {
+			= sites.begin();
+			it != sites.end(); ++it) {
 		// break out of loop if we've exceeded
 		// the number of allowed sites
 		if (siteCount > sitesAllowed) {
@@ -1596,8 +1583,6 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node) {
 			siteCount++;
 		}
 	}
-
-	m_travelTimeMutex.unlock();
 
 	// sort the site links in ascending distance
 	node->sortSiteLinks();
@@ -1642,6 +1627,29 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		return(false);
 	}
 
+	// lock the travel times so it is constant while we build the node
+	while ((m_travelTimeMutex.try_lock() == false) &&
+				 (getTerminate() == false)) {
+		// update thread status
+		setThreadHealth(true);
+
+		// wait a little while
+		std::this_thread::sleep_for(
+				std::chrono::milliseconds(getSleepTime()));
+	}
+
+	// setup traveltimes for this node
+	if (m_pNucleationTravelTime1 != NULL) {
+		m_pNucleationTravelTime1->setTTOrigin(node->getLatitude(),
+											node->getLongitude(),
+											node->getDepth());
+	}
+	if (m_pNucleationTravelTime2 != NULL) {
+		m_pNucleationTravelTime2->setTTOrigin(node->getLatitude(),
+											node->getLongitude(),
+											node->getDepth());
+	}
+
 	// compute traveltime(s) between site and node using distance
 	// we assume that the caller initialized the travel times for us
 	double travelTime1 = traveltime::CTravelTime::k_dTravelTimeInvalid;
@@ -1657,6 +1665,8 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		travelTime2 = m_pNucleationTravelTime2->T(distance);
 		phase2 = m_pNucleationTravelTime2->m_sPhase;
 	}
+
+	m_travelTimeMutex.unlock();
 
 	// check to make sure we have at least one valid travel time
 	if ((travelTime1 < 0) && (travelTime2 < 0)) {
@@ -1732,8 +1742,25 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	int nodeCount = 0;
 	int totalNodes = size();
 
+	// lock the site list while getting site list
+	while ((m_vSiteMutex.try_lock() == false) &&
+					(getTerminate() == false)) {
+		// update thread status
+		setThreadHealth(true);
+
+		// wait a little while
+		std::this_thread::sleep_for(
+				std::chrono::milliseconds(getSleepTime()));
+	}
+
 	// update the web site list from the master list in SiteList
 	loadWebSiteList();
+
+	// grab a copy of the site vector for our use
+	std::vector<std::pair<double, std::shared_ptr<CSite>>>
+		sites(vWebSites);
+
+	m_vSiteMutex.unlock();
 
 	// for each node in web
 	for (auto &node : m_vNode) {
@@ -1741,17 +1768,6 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 
 		// update thread status
 		setThreadHealth(true);
-
-		// lock the site list while we are regenerating the node
-		while ((m_vSiteMutex.try_lock() == false) &&
-					 (getTerminate() == false)) {
-			// update thread status
-			setThreadHealth(true);
-
-			// wait a little while
-			std::this_thread::sleep_for(
-					std::chrono::milliseconds(getSleepTime()));
-		}
 
 		// some optimization to avoid unneeded work in some cases
 		std::string whatDo = "";
@@ -1786,7 +1802,6 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 				// if we're at max sites (no more space)
 				if ((node->getSiteLinksCount() >= m_iNumStationsPerNode)
 						&& (newDistance > maxDistance)) {
-					m_vSiteMutex.unlock();
 					continue;
 				}
 			} else {
@@ -1805,20 +1820,18 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 			// don't bother if this node doesn't have this site, there's
 			// nothing to remove here
 			if (node->getSite(site->getSCNL()) == NULL) {
-				m_vSiteMutex.unlock();
 				continue;
 			}
 		}
 
 		// resort the site list for the current node,
-		sortSiteListForNode(node->getLatitude(), node->getLongitude(),
-			node->getDepth());
+		sites = sortSiteListForNode(node->getLatitude(), node->getLongitude(),
+			node->getDepth(), sites);
 
 		// its easier to just regenerate the node links than rat through
 		// and figure out where to add / remove / update the new station.
 		// so rebuild the node
-		generateNodeSites(node);
-		m_vSiteMutex.unlock();
+		generateNodeSites(node, sites);
 
 		// we've modified a node
 		nodeModCount++;

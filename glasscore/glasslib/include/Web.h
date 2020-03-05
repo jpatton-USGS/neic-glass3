@@ -258,18 +258,12 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * \param lat - A double variable containing the latitude to use
 	 * \param lon - A double variable containing the longitude to use
 	 * \param depth - A double variable containing the depth to use
+	 * \param sites - A vector of site distance pairs to sort
+	 * \return the sorted vector of site distance pairs
 	 */
-	void sortSiteListForNode(double lat, double lon, double depth);
-
-	/**
-	 * \brief Get size of site list
-	 *
-	 * This function gets the number of distance / site pairs currently in the 
-	 * site list
-	 *
-	 * \return - A int containing the size of the site list
-	 */
-	int getSiteListSize();
+	std::vector<std::pair<double, std::shared_ptr<CSite>>> sortSiteListForNode(
+			double lat, double lon, double depth,
+			std::vector<std::pair<double, std::shared_ptr<CSite>>> sites);
 
 	/**
 	 * \brief Create new node
@@ -282,10 +276,12 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * \param lon - A double variable containing the longitude to use
 	 * \param z - A double variable containing the depth to use
 	 * \param resol - A double variable containing the spatial resolution to use
+	 * \param sites - A vector of site distance pairs to use
 	 * \return Returns a std::shared_ptr to the newly created node.
 	 */
 	std::shared_ptr<CNode> generateNode(double lat, double lon, double z,
-										double resol);
+										double resol,
+										std::vector<std::pair<double, std::shared_ptr<CSite>>> sites);
 
 	/**
 	 * \brief Add node to list
@@ -304,9 +300,11 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * defined by nDetect.
 	 *
 	 * \param node - A std::shared_ptr to the node to link sites to
+	 * \param sites - A vector of distance/site pairs to use for the node
 	 * \return Returns a std::shared_ptr to the updated node.
 	 */
-	std::shared_ptr<CNode> generateNodeSites(std::shared_ptr<CNode> node);
+	std::shared_ptr<CNode> generateNodeSites(std::shared_ptr<CNode> node,
+		std::vector<std::pair<double, std::shared_ptr<CSite>>> sites);
 
 	/**
 	 * \brief Add site to node
@@ -527,7 +525,7 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * also fills in the distance), and used by genNode() during a Single(),
 	 * Shell(), Grid(), or Global() call
 	 */
-	std::vector<std::pair<double, std::shared_ptr<CSite>>>m_vSitesSortedForCurrentNode;  // NOLINT
+	std::vector<std::pair<double, std::shared_ptr<CSite>>>vWebSites;  // NOLINT
 
 	/**
 	 * \brief A std::vector containing a std::shared_ptr to each node in this
