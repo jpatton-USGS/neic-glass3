@@ -291,10 +291,10 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 		}
 
 		// use zonestats to get the max depth for this node, if we have
-		// zonestats available, otherwise defailt to the configured
+		// zonestats available, otherwise default to the configured
 		// max depth for the grid
 		double dMaxNodeDepth = m_dMaxDepth;
-		bool bReachedMaxDepth = false;
+		// bool bReachedMaxDepth = false;
 		if (m_pZoneStats != NULL) {
 			double aDepth = m_pZoneStats->getMaxDepthForLatLon(aLat, aLon);
 			if (aDepth != m_pZoneStats->depthInvalid) {
@@ -305,11 +305,14 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 		// for each depth
 		for (auto z : depthLayerArray) {
 			// check to see if Z is below the maximum depth
-			if (z >= std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
-				bReachedMaxDepth = true;
-				z = dMaxNodeDepth;
-			}
+			// if (z >= std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
+			// bReachedMaxDepth = true;
+			// z = dMaxNodeDepth;
+			// }
 
+			if (z > std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
+				break;
+			}
 			// lock the site list while creating a node
 			while ((m_vSiteMutex.try_lock() == false)  &&
 				 		 (getTerminate() == false)) {
@@ -352,9 +355,9 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 				}
 			}  // end if addNode()
 
-			if (bReachedMaxDepth) {
-				break;
-			}
+			// if (bReachedMaxDepth) {
+			// break;
+			// }
 		}  // end for each depth in depthLayerArray
 	}  // end for each sample
 
@@ -543,10 +546,9 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			double loncol = lon0 + (icol * lonDistance);
 
 			// use zonestats to get the max depth for this node, if we have
-			// zonestats available, otherwise defailt to the configured
+			// zonestats available, otherwise default to the configured
 			// max depth for the grid
 			double dMaxNodeDepth = m_dMaxDepth;
-			bool bReachedMaxDepth = false;
 			if (m_pZoneStats != NULL) {
 				double aDepth = m_pZoneStats->getMaxDepthForLatLon(latrow,
 																	loncol);
@@ -558,17 +560,8 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			// for each depth at this generateLocalGrid point
 			for (auto z : depthLayerArray) {
 				// check to see if Z is below the maximum depth
-				if (z >= std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
-					bReachedMaxDepth = true;
-					/*
-					 glass3::util::Logger::log(
-					 "debug",
-					 "CWeb::generateLocalGrid:  Truncated layer depth to "
-					 + std::to_string(dMaxNodeDepth)
-					 + " for Lat/Lon " + std::to_string(aLat) + "/"
-					 + std::to_string(aLon));
-					 */
-					z = dMaxNodeDepth;
+				if (z > std::max(dMaxNodeDepth, k_dMinimumMaxNodeDepth)) {
+					break;
 				}
 
 				// lock the site list while generating a node
@@ -605,10 +598,6 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 					// write to station file
 					outstafile << node->getSitesString();
 				}  // end if getSaveGrid()
-
-				if (bReachedMaxDepth) {
-					break;
-				}
 			}  // end for each depth layer
 		}  // end for each lon-column in grid
 	}  // end for each lat-row in grid
@@ -1362,11 +1351,11 @@ bool CWeb::loadWebSiteList() {
 	}
 
 	// log
-	char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
-	snprintf(sLog, sizeof(sLog),
-				"CWeb::loadWebSiteList: %d sites available for web %s", nsite,
-				m_sName.c_str());
-	glass3::util::Logger::log("debug", sLog);
+	// char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
+	// snprintf(sLog, sizeof(sLog),
+	// "CWeb::loadWebSiteList: %d sites available for web %s", nsite,
+	// m_sName.c_str());
+	// glass3::util::Logger::log("debug", sLog);
 
 	// clear web site list
 	m_vSitesSortedForCurrentNode.clear();
@@ -1393,10 +1382,10 @@ bool CWeb::loadWebSiteList() {
 	}
 
 	// log
-	snprintf(sLog, sizeof(sLog),
-				"CWeb::loadWebSiteList: selected %d allowed sites for web %s",
-				getSiteListSize(), m_sName.c_str());
-	glass3::util::Logger::log("debug", sLog);
+	// snprintf(sLog, sizeof(sLog),
+	// "CWeb::loadWebSiteList: selected %d allowed sites for web %s",
+	// getSiteListSize(), m_sName.c_str());
+	// glass3::util::Logger::log("debug", sLog);
 
 	return (true);
 }
@@ -1708,13 +1697,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		return;
 	}
 
-	// update the web site list from the master list in SiteList
-	// so we have the changes (usually disables / quality updates)
-	loadWebSiteList();
-
 	// don't bother if this site isn't allowed, note that we ignore the
 	// use and enabled flags here since we're updating a site (which might be
-	// unused or disabled)
+	// unused or disabled, but still in this web currently)
 	if (isSiteAllowed(site, false) == false) {
 		glass3::util::Logger::log(
 				"debug",
@@ -1740,6 +1725,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	int nodeCount = 0;
 	int totalNodes = size();
 
+	// update the web site list from the master list in SiteList
+	loadWebSiteList();
+
 	// for each node in web
 	for (auto &node : m_vNode) {
 		nodeCount++;
@@ -1758,37 +1746,57 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 					std::chrono::milliseconds(getSleepTime()));
 		}
 
-		// some optimization to avoid unneeded work
+		// some optimization to avoid unneeded work in some cases
+		std::string whatDo = "";
 		if (site->getUse() == true) {
-			// if we're an add / update check to make sure the new station is valid
-			// for the node i.e. not too far out,
-			glass3::util::Geo geo;
-			geo.setGeographic(node->getLatitude(), node->getLongitude(),
-								glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
+			// use/enable true means add/update
+			// do we have this site
+			std::shared_ptr<CSite> oldSite = node->getSite(site->getSCNL());
+			if (oldSite == NULL) {
+				// we don't have it, so it's an add
+				whatDo = "Add";
 
-			// compute delta distance between site and node
-			double newDistance = glass3::util::GlassMath::k_RadiansToDegrees
-					* site->getGeo().delta(&geo);
+				// if we're an add check to make sure the new station is valid
+				// for the node i.e. not too far out,
+				glass3::util::Geo geo;
+				geo.setGeographic(node->getLatitude(), node->getLongitude(),
+									glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
 
-			// get site in node list
-			// NOTE: this assumes that the node site list is sorted
-			// on distance
-			std::shared_ptr<CSite> furthestSite = node->getLastSite();
+				// compute delta distance between site and node
+				double newDistance = glass3::util::GlassMath::k_RadiansToDegrees
+						* site->getGeo().delta(&geo);
 
-			// compute distance to farthest site
-			double maxDistance = glass3::util::GlassMath::k_RadiansToDegrees
-					* geo.delta(&furthestSite->getGeo());
+				// get last site in node list
+				// NOTE: this assumes that the node site list is sorted
+				// on distance
+				std::shared_ptr<CSite> furthestSite = node->getLastSite();
 
-			// Ignore if new site is farther than last linked site, and
-			// we're at max sites
-			if ((node->getSiteLinksCount() >= m_iNumStationsPerNode)
-					&& (newDistance > maxDistance)) {
-				m_vSiteMutex.unlock();
-				continue;
+				// compute distance to farthest site
+				double maxDistance = glass3::util::GlassMath::k_RadiansToDegrees
+						* geo.delta(&furthestSite->getGeo());
+
+				// Ignore if new site is farther than last linked site, and
+				// if we're at max sites (no more space)
+				if ((node->getSiteLinksCount() >= m_iNumStationsPerNode)
+						&& (newDistance > maxDistance)) {
+					m_vSiteMutex.unlock();
+					continue;
+				}
+			} else {
+				// we already have it, so it's an update
+				whatDo = "Update";
+
+				// can't check if sites are the same, because sitelist has already
+				// updated the site, so it'll always appear the same at this point,
+				// so all we can do is rebuild the node in case the updated
+				// changes are important to the node.
 			}
 		} else {
+			// use/enable false means remove
+			whatDo = "Remove";
+
 			// don't bother if this node doesn't have this site, there's
-			// nothing to do here
+			// nothing to remove here
 			if (node->getSite(site->getSCNL()) == NULL) {
 				m_vSiteMutex.unlock();
 				continue;
@@ -1813,26 +1821,27 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 			glass3::util::Logger::log(
 					"debug",
 					"CWeb::updateSite: Station " + site->getSCNL() + " processed "
+							+ "(" + whatDo + ") "
 							+ std::to_string(nodeCount) + " out of "
 							+ std::to_string(totalNodes) + " nodes in web: "
 							+ m_sName + ". Modified "
-							+ std::to_string(nodeModCount) + " nodes.");
+							+ std::to_string(nodeModCount) + " nodes so far.");
 		}
 	}
 
 	// log info if we've updated any node with this site
 	if (nodeModCount > 0) {
 		char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
-		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Updated (or removed) "
-					"site: %s in %d node(s) in web: %s",
+		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Station %s modified"
+					" %d node(s) in web: %s",
 					site->getSCNL().c_str(), nodeModCount, m_sName.c_str());
 		glass3::util::Logger::log("info", sLog);
 	} else {
 		glass3::util::Logger::log(
 				"debug",
 				"CWeb::updateSite: Station " + site->getSCNL()
-						+ " not updated in any "
-								"nodes in web: " + m_sName + ".");
+						+ " did not modify in any "
+						"nodes in web: " + m_sName + ".");
 	}
 }
 
