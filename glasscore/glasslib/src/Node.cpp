@@ -220,6 +220,8 @@ bool CNode::unlinkLastSite() {
 		return (false);
 	}
 
+	m_bEnabled = false;
+
 	// unlink node from last site
 	// done before lock guard to prevent
 	// deadlock between node and site list mutexes.
@@ -248,6 +250,7 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
 									"CNode::nucleate: NULL web pointer.");
 		return (NULL);
 	}
+
 	// don't nucleate if this node is disabled
 	if (m_bEnabled == false) {
 		return (NULL);
@@ -274,6 +277,11 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
 
 	// search through each site linked to this node
 	for (const auto &link : m_vSiteLinkList) {
+		// halt and return null if the node has been disabled
+		if (m_bEnabled == false) {
+			return (NULL);
+		}
+
 		// init sigbest
 		double dSigBest_phase1 = -1.0;
 		double dSigBest_phase2 = -1.0;
@@ -363,6 +371,11 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
 		auto lower = site->getLower(min);
 
 		for (auto it = lower; (it != site->getEnd()); ++it) {
+			// halt and return null if the node has been disabled
+			if (m_bEnabled == false) {
+				return (NULL);
+			}
+
 			auto pick = *it;
 
 			bool phase1set = false;

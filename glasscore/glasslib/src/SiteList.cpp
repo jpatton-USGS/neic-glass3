@@ -610,7 +610,10 @@ glass3::util::WorkState CSiteList::work() {
 	// pass all the changes to the webs
 	for (auto aSite : vModifiedSites) {
 		if (CGlass::getWebList()) {
-				CGlass::getWebList()->updateSite(aSite);
+			CGlass::getWebList()->updateSite(aSite);
+
+			// update thread status
+			setThreadHealth();
 		}
 	}
 

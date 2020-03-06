@@ -1292,10 +1292,8 @@ bool CWeb::isSiteAllowed(std::shared_ptr<CSite> site, bool checkEnabled) {
 
 	if (checkEnabled == true) {
 		// if the site has been disabled, return false
+		// use includes checking enable flag
 		if (!site->getUse()) {
-			return(false);
-		}
-		if (!site->getEnable()) {
 			return(false);
 		}
 		// check quality
@@ -1359,6 +1357,8 @@ bool CWeb::loadWebSiteList() {
 	if (tUpdated > m_tLastUpdated) {
 		m_tLastUpdated = tUpdated;
 	} else {
+		glass3::util::Logger::log(
+				"debug", "CWeb::loadWebSiteList: Site List already up to date.");
 		// our site list is already the latest
 		return(true);
 	}
@@ -1373,16 +1373,9 @@ bool CWeb::loadWebSiteList() {
 	// don't bother continuing if we have no sites
 	if (nsite <= 0) {
 		glass3::util::Logger::log(
-				"warning", "CWeb::loadWebSiteList: No sites in site list.");
+				"warning", "CWeb::loadWebSiteList: No sites in new site list.");
 		return (false);
 	}
-
-	// log
-	// char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
-	// snprintf(sLog, sizeof(sLog),
-	// "CWeb::loadWebSiteList: %d sites available for web %s", nsite,
-	// m_sName.c_str());
-	// glass3::util::Logger::log("debug", sLog);
 
 	// lock the site list while we are rebuilding it
 	while ((m_vSiteMutex.try_lock() == false) &&
@@ -1393,9 +1386,6 @@ bool CWeb::loadWebSiteList() {
 
 	// clear web site list
 	vWebSites.clear();
-
-	// update thread status
-	setThreadHealth(true);
 
 	// for each site
 	for (std::vector<std::shared_ptr<CSite>>::iterator it = siteList.begin();
@@ -1413,15 +1403,19 @@ bool CWeb::loadWebSiteList() {
 			vWebSites.push_back(
 					std::pair<double, std::shared_ptr<CSite>>(0.0, site));
 		}
+
+		// update thread status
+		setThreadHealth(true);
 	}
 
-	// log
-	// snprintf(sLog, sizeof(sLog),
-	// "CWeb::loadWebSiteList: selected %d allowed sites for web %s",
-	// vWebSites.size(), m_sName.c_str());
-	// glass3::util::Logger::log("debug", sLog);
-
 	m_vSiteMutex.unlock();
+
+	// log
+	char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
+	snprintf(sLog, sizeof(sLog),
+			"CWeb::loadWebSiteList: selected %d allowed sites out of %d for web %s",
+			static_cast<int>(vWebSites.size()), nsite, m_sName.c_str());
+	glass3::util::Logger::log("debug", sLog);
 
 	return (true);
 }
@@ -1454,10 +1448,10 @@ std::vector<std::pair<double, std::shared_ptr<CSite>>>
 
 		// set the distance in the vector
 		*it = sitePair;
-	}
 
-	// update thread status
-	setThreadHealth(true);
+		// update thread status
+		setThreadHealth(true);
+	}
 
 	// sort site distance pair list
 	std::sort(sites.begin(), sites.end(), sortSite);
@@ -1595,6 +1589,9 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 			// we've added a site
 			siteCount++;
 		}
+
+		// update thread status
+		setThreadHealth(true);
 	}
 
 	// sort the site links in ascending distance
@@ -1617,9 +1614,6 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 	if (node == NULL) {
 		return(false);
 	}
-
-	// update thread status
-	setThreadHealth(true);
 
 	// compute distance between site and node
 	glass3::util::Geo geoNode = node->getGeo();
