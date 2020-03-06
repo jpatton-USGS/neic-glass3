@@ -660,6 +660,12 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	mutable std::recursive_mutex m_WebMutex;
 
 	/**
+	 * \brief An integer containing the epoch time that the web site list was last 
+	 * updated.
+	 */
+	std::atomic<int> m_tLastUpdated;
+
+	/**
 	 * \brief default azimuth taper
 	 */
 	static constexpr double k_dAzimuthTaperDefault = 360.0;

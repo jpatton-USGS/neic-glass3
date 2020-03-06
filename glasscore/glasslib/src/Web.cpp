@@ -158,6 +158,9 @@ bool CWeb::initialize(std::string name, double thresh, int numDetect,
 
 	m_dAzimuthTaper = aziTap;
 	m_dMaxDepth = maxDep;
+
+	m_tLastUpdated = -1;
+
 	// done
 	return (true);
 }
@@ -1350,6 +1353,16 @@ bool CWeb::loadWebSiteList() {
 		return (false);
 	}
 
+	// check to see if the site list has changed since we last asked
+	// this is to reduce the number of redundant site list updates
+	int tUpdated = m_pSiteList->getLastUpdated();
+	if (tUpdated > m_tLastUpdated) {
+		m_tLastUpdated = tUpdated;
+	} else {
+		// our site list is already the latest
+		return(true);
+	}
+
 	// git all the sites in pSiteList
 	std::vector<std::shared_ptr<CSite>> siteList =
 			m_pSiteList->getListOfSites();
@@ -1715,7 +1728,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	}
 
 	// don't bother if this site isn't allowed, note that we ignore the
-	// use and enabled flags here since we're updating a site (which might be
+	// use / enabled /etc flags here since we're updating a site (which might be
 	// unused or disabled, but still in this web currently)
 	if (isSiteAllowed(site, false) == false) {
 		glass3::util::Logger::log(
@@ -1811,7 +1824,15 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 				// we already have it, so it's an update
 				whatDo = "Update";
 
-				// can't check if sites are the same, because sitelist has already
+				// now check again if the site is allowed,
+				// INCLUDING use / enabled / etc this time
+				if (isSiteAllowed(site) == true) {
+					// if it still belongs in the web, then there's nothing to do
+					// we may have already done this update with a previous modification
+					// NOTE we trust that the site hasn't MOVED...
+					continue;
+				}
+				// can't check further if sites are the same, because sitelist has already
 				// updated the site, so it'll always appear the same at this point,
 				// so all we can do is rebuild the node in case the updated
 				// changes are important to the node.

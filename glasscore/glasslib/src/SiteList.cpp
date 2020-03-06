@@ -50,6 +50,7 @@ void CSiteList::clear() {
 	m_iHoursBeforeLookingUp = -1;
 	m_iMaxPicksPerHour = -1;
 	m_tLastChecked = std::time(NULL);
+	m_tLastUpdated = std::time(NULL);
 }
 
 // -------------------------------------------------------receiveExternalMessage
@@ -221,26 +222,26 @@ bool CSiteList::addSite(std::shared_ptr<CSite> site) {
 	std::lock_guard<std::recursive_mutex> guard(m_SiteListMutex);
 
 	// check if we already had this site
-	std::shared_ptr<CSite> updatedSite = NULL;
 	if (oldSite) {
 		// update existing site in list
 		oldSite->update(site.get());
-		updatedSite = oldSite;
 	} else {
 		// add new site to list and map
 		m_vSite.push_back(site);
 		m_mSite[site->getSCNL()] = site;
-		updatedSite = site;
 	}
 
 	// pass updated site to webs
 	if (CGlass::getWebList()) {
-		CGlass::getWebList()->updateSite(updatedSite);
+		CGlass::getWebList()->updateSite(site);
 	}
 
 	// what time is it
 	time_t tNow;
 	std::time(&tNow);
+
+	// list was modified
+	m_tLastUpdated = tNow;
 
 	// since we've just added or updated
 	// set the lookup time to now
@@ -376,12 +377,7 @@ std::shared_ptr<CSite> CSiteList::getSite(std::string site, std::string comp,
 std::vector<std::shared_ptr<CSite>> CSiteList::getListOfSites() {
 	std::lock_guard<std::recursive_mutex> guard(m_SiteListMutex);
 
-	std::vector<std::shared_ptr<CSite>> siteList;
-
-	// move through whole vector
-	for (const auto &site : m_vSite) {
-		siteList.push_back(site);
-	}
+	std::vector<std::shared_ptr<CSite>> siteList(m_vSite);
 
 	// return what we got
 	return (siteList);
@@ -470,6 +466,9 @@ glass3::util::WorkState CSiteList::work() {
 	glass3::util::Logger::log("debug",
 							"CSiteList::work: checking for sites not picking");
 
+	// create vector to hold the sites that changed
+	std::vector<std::shared_ptr<CSite>> vModifiedSites;
+
 	// for each used site in the site list
 	for (auto aSite : m_vSite) {
 		// skip disabled sites
@@ -526,10 +525,10 @@ glass3::util::WorkState CSiteList::work() {
 			// disable the site
 			aSite->setUse(false);
 
-			// remove site from webs
-			if (CGlass::getWebList()) {
-				CGlass::getWebList()->updateSite(aSite);
-			}
+			// site list was modified
+			m_tLastUpdated = tNow;
+
+			vModifiedSites.push_back(aSite);
 		}
 
 		// update thread status
@@ -593,14 +592,21 @@ glass3::util::WorkState CSiteList::work() {
 			// enable the site
 			aSite->setUse(true);
 
-			// add site to webs
-			if (CGlass::getWebList()) {
-				CGlass::getWebList()->updateSite(aSite);
-			}
+			// site list was modified
+			m_tLastUpdated = tNow;
+
+			vModifiedSites.push_back(aSite);
 		}
 
 		// update thread status
 		setThreadHealth();
+	}
+
+	// pass all the changes to the webs
+	for (auto aSite : vModifiedSites) {
+		if (CGlass::getWebList()) {
+				CGlass::getWebList()->updateSite(aSite);
+		}
 	}
 
 	return (glass3::util::WorkState::OK);
@@ -634,6 +640,11 @@ void CSiteList::setMaxPicksPerHour(int maxPicksPerHour) {
 // ----------------------------------------------------getMaxPicksPerHour
 int CSiteList::getMaxPicksPerHour() const {
 	return (m_iMaxPicksPerHour);
+}
+
+// ----------------------------------------------------getLastUpdated
+int CSiteList::getLastUpdated() const {
+	return (m_tLastUpdated);
 }
 
 }  // namespace glasscore
