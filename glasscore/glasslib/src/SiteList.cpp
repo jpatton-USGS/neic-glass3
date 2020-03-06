@@ -217,9 +217,7 @@ bool CSiteList::addSite(std::shared_ptr<CSite> site) {
 	}
 
 	// check to see if we have an existing site
-	std::shared_ptr<CSite> oldSite = getSite(site->getSCNL());
-
-	std::lock_guard<std::recursive_mutex> guard(m_SiteListMutex);
+	std::shared_ptr<CSite> oldSite = getSite(site->getSCNL());;
 
 	// check if we already had this site
 	if (oldSite) {
@@ -227,8 +225,10 @@ bool CSiteList::addSite(std::shared_ptr<CSite> site) {
 		oldSite->update(site.get());
 	} else {
 		// add new site to list and map
+		m_SiteListMutex.lock();
 		m_vSite.push_back(site);
 		m_mSite[site->getSCNL()] = site;
+		m_SiteListMutex.unlock();
 	}
 
 	// pass updated site to webs
@@ -245,7 +245,9 @@ bool CSiteList::addSite(std::shared_ptr<CSite> site) {
 
 	// since we've just added or updated
 	// set the lookup time to now
+	m_SiteListMutex.lock();
 	m_mLastTimeSiteLookedUp[site->getSCNL()] = tNow;
+	m_SiteListMutex.unlock();
 
 	return (true);
 }
@@ -333,15 +335,14 @@ std::shared_ptr<CSite> CSiteList::getSite(std::string site, std::string comp,
 		time_t tNow;
 		std::time(&tNow);
 
-		// lock while we are searching / editing m_mLastTimeSiteLookedUp
-		std::lock_guard<std::recursive_mutex> guard(m_SiteListMutex);
-
 		// get what time this station has been looked up before
+		m_SiteListMutex.lock();
 		int tLookup = 0;
 		auto itsite = m_mLastTimeSiteLookedUp.find(scnl);
 		if (itsite != m_mLastTimeSiteLookedUp.end()) {
 			tLookup = m_mLastTimeSiteLookedUp[scnl];
 		}
+		m_SiteListMutex.unlock();
 
 		// only ask for a station occasionally
 		if ((tNow - tLookup) > (k_nHoursToSeconds * m_iHoursBeforeLookingUp)) {
@@ -365,7 +366,9 @@ std::shared_ptr<CSite> CSiteList::getSite(std::string site, std::string comp,
 			CGlass::sendExternalMessage(request);
 
 			// remember when we tried
+			m_SiteListMutex.lock();
 			m_mLastTimeSiteLookedUp[scnl] = tNow;
+			m_SiteListMutex.unlock();
 		}
 	}
 
@@ -392,10 +395,11 @@ std::shared_ptr<json::Object> CSiteList::generateSiteListMessage(bool send) {
 	// array to hold data
 	json::Array stationList;
 
-	std::lock_guard<std::recursive_mutex> guard(m_SiteListMutex);
+	// get a site list to use
+	std::vector<std::shared_ptr<CSite>> siteList = getListOfSites();
 
 	// move through whole vector
-	for (const auto &site : m_vSite) {
+	for (const auto &site : siteList) {
 		json::Object stationObj;
 
 		// construct a json message containing our site info
@@ -458,7 +462,8 @@ glass3::util::WorkState CSiteList::work() {
 		return (glass3::util::WorkState::Idle);
 	}
 
-	std::lock_guard<std::recursive_mutex> siteListGuard(m_SiteListMutex);
+	// get list of sites to check
+	std::vector<std::shared_ptr<CSite>> sites = getListOfSites();
 
 	// remember when we last checked
 	m_tLastChecked = tNow;
@@ -470,7 +475,7 @@ glass3::util::WorkState CSiteList::work() {
 	std::vector<std::shared_ptr<CSite>> vModifiedSites;
 
 	// for each used site in the site list
-	for (auto aSite : m_vSite) {
+	for (auto aSite : sites) {
 		// skip disabled sites
 		if (aSite->getEnable() == false) {
 			continue;
@@ -536,7 +541,7 @@ glass3::util::WorkState CSiteList::work() {
 	}
 
 	// for each unused site in the site list
-	for (auto aSite : m_vSite) {
+	for (auto aSite : sites) {
 		// skip disabled sites
 		if (aSite->getEnable() == false) {
 			continue;
