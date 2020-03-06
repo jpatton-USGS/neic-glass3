@@ -1560,9 +1560,13 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 	// for all the allowed sites (note we won't usually end up going through all
 	// of them)
 	int siteCount = 0;
+	int failCount = 0;
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
 			= sites.begin();
 			it != sites.end(); ++it) {
+		// update thread status
+		setThreadHealth(true);
+
 		// break out of loop if we've exceeded
 		// the number of allowed sites
 		if (siteCount > sitesAllowed) {
@@ -1583,15 +1587,18 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 
 		// add current site to this node
 		if (addSiteToNode(site, node) == false) {
+			if (failCount > sitesAllowed) {
+				// give up
+				break;
+			}
+
 			// move on to the next site
+			failCount++;
 			continue;
 		} else {
 			// we've added a site
 			siteCount++;
 		}
-
-		// update thread status
-		setThreadHealth(true);
 	}
 
 	// sort the site links in ascending distance
@@ -1644,6 +1651,9 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		std::this_thread::sleep_for(
 				std::chrono::milliseconds(getSleepTime()));
 	}
+
+	// update thread status
+	setThreadHealth(true);
 
 	// setup traveltimes for this node
 	if (m_pNucleationTravelTime1 != NULL) {
@@ -1732,7 +1742,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		return;
 	}
 
-	// log what we're doing
+	// log what we're going to do
 	if (site->getUse() == true) {
 		glass3::util::Logger::log(
 			"debug",
@@ -1749,6 +1759,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	int nodeCount = 0;
 	int totalNodes = size();
 
+	// timing code
 	std::chrono::high_resolution_clock::time_point tStartTime =
 			std::chrono::high_resolution_clock::now();
 
@@ -1764,6 +1775,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	}
 
 	// update the web site list from the master list in SiteList
+	// handels redundant updates
 	loadWebSiteList();
 
 	// grab a copy of the site vector for our use
@@ -1779,18 +1791,35 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		// update thread status
 		setThreadHealth(true);
 
+		// don't start to update a node while it's being modifed
+		while ((node->getEnabled() == false) &&
+						(getTerminate() == false)) {
+			// update thread status
+			setThreadHealth(true);
+
+			// wait a little while
+			std::this_thread::sleep_for(
+					std::chrono::milliseconds(getSleepTime()));
+		}
+
 		// some optimization to avoid unneeded work in some cases
+		// basically, since we rebuild the entire node from the master site list
+		// for an  update, if there is a lot of queued updates, they may be
+		// effectively handled by the rebuild before their turn comes up, so we
+		// should try to avoid re-rebuilding the node over and over for no good
+		// purpose
 		std::string whatDo = "";
 		if (site->getUse() == true) {
 			// use/enable true means add/update
 			// do we have this site
 			std::shared_ptr<CSite> oldSite = node->getSite(site->getSCNL());
 			if (oldSite == NULL) {
-				// we don't have it, so it's an add
+				// we don't have this site, so it's an add
 				whatDo = "Add";
 
 				// if we're an add check to make sure the new station is valid
-				// for the node i.e. not too far out,
+				// for the node i.e. not too far out, no point in going further if
+				// it's past the node's furthest site
 				glass3::util::Geo geo;
 				geo.setGeographic(node->getLatitude(), node->getLongitude(),
 									glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
@@ -1801,42 +1830,44 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 
 				// get last site in node list
 				// NOTE: this assumes that the node site list is sorted
-				// on distance
+				// on distance, which it is supposed to be
 				std::shared_ptr<CSite> furthestSite = node->getLastSite();
 
-				// compute distance to farthest site
+				// compute the distance to farthest site
 				double maxDistance = glass3::util::GlassMath::k_RadiansToDegrees
 						* geo.delta(&furthestSite->getGeo());
 
-				// Ignore if new site is farther than last linked site, and
-				// if we're at max sites (no more space)
+				// Ignore (skip) this add if new site is farther than last linked site,
+				// and if this node has the maximum number of sites (no more space)
 				if ((node->getSiteLinksCount() >= m_iNumStationsPerNode)
 						&& (newDistance > maxDistance)) {
 					continue;
 				}
 			} else {
-				// we already have it, so it's an update
+				// we already have this site, so it's an update
 				whatDo = "Update";
 
-				// now check again if the site is allowed,
+				// now check again to see if the site is allowed,
 				// INCLUDING use / enabled / etc this time
 				if (isSiteAllowed(site) == true) {
-					// if it still belongs in the web, then there's nothing to do
-					// we may have already done this update with a previous modification
+					// if it still belongs in the web, and it's already in the web then
+					// there's nothing to do, we may have already done this update with a
+					// previous modification, or the update isn't relevent to this web
 					// NOTE we trust that the site hasn't MOVED...
 					continue;
 				}
 				// can't check further if sites are the same, because sitelist has already
 				// updated the site, so it'll always appear the same at this point,
-				// so all we can do is rebuild the node in case the updated
-				// changes are important to the node.
+				// and we already know the site update is relevent, so all we can do now
+				// is rebuild the node.
 			}
 		} else {
 			// use/enable false means remove
 			whatDo = "Remove";
 
 			// don't bother if this node doesn't have this site, there's
-			// nothing to remove here
+			// nothing to remove here (it may have already been removed or we
+			// may never of had it in the first place)
 			if (node->getSite(site->getSCNL()) == NULL) {
 				continue;
 			}

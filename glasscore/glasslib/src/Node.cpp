@@ -241,16 +241,7 @@ bool CNode::unlinkLastSite() {
 
 // ---------------------------------------------------------nucleate
 std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
-	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
-
 	// nullchecks
-	// check web
-	if (m_pWeb == NULL) {
-		glass3::util::Logger::log("error",
-									"CNode::nucleate: NULL web pointer.");
-		return (NULL);
-	}
-
 	// don't nucleate if this node is disabled
 	if (m_bEnabled == false) {
 		return (NULL);
@@ -258,8 +249,21 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
 
 	// get the cut and threshold from our
 	// parent web
+	m_NodeMutex.lock();
+
+	// check web
+	if (m_pWeb == NULL) {
+		glass3::util::Logger::log("error",
+									"CNode::nucleate: NULL web pointer.");
+		m_NodeMutex.unlock();
+		return (NULL);
+	}
+
 	int nCut = m_pWeb->getNucleationDataCountThreshold();
 	double dThresh = m_pWeb->getNucleationStackThreshold();
+
+	m_NodeMutex.unlock();
+
 	double dAzimuthRange = CGlass::getBeamMatchingAzimuthWindow();
 	// commented out because slowness matching of beams is not yet implemented
 	// but is scheduled to be soon
@@ -272,11 +276,13 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
 
 	std::vector < std::shared_ptr < CPick >> vPick;
 
-	// lock mutex for this scope (iterating through the site links)
-	std::lock_guard < std::mutex > guard(m_SiteLinkListMutex);
+	// get local list of links to check
+	m_SiteLinkListMutex.lock();
+	std::vector<SiteLink> vLinks(m_vSiteLinkList);
+	m_SiteLinkListMutex.unlock();
 
 	// search through each site linked to this node
-	for (const auto &link : m_vSiteLinkList) {
+	for (const auto &link : vLinks) {
 		// halt and return null if the node has been disabled
 		if (m_bEnabled == false) {
 			return (NULL);
@@ -592,10 +598,12 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin) {
 	}
 
 	// create trigger
+	m_NodeMutex.lock();
 	std::shared_ptr<CTrigger> trigger(
 			new CTrigger(m_dLatitude, m_dLongitude, m_dDepth, tOrigin,
 							m_dResolution, m_dMaxDepth, dSum, nCount, vPick,
 							m_pWeb));
+	m_NodeMutex.unlock();
 
 	// the node nucleated an event
 	return (trigger);
