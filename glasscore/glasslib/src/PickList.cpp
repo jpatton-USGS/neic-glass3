@@ -455,6 +455,9 @@ glass3::util::WorkState CPickList::work() {
 			newPick->getTPick(), newPick->getSite()->getSCNL(),
 			CGlass::getPickDuplicateTimeWindow());
 
+	// signal that the thread is still alive after pick insertion
+	setThreadHealth();
+
 	// it is a duplicate
 	if (existingPick != NULL) {
 		// do we allow updates (latest pick wins rather than
@@ -502,6 +505,9 @@ glass3::util::WorkState CPickList::work() {
 		// message was processed
 		return (glass3::util::WorkState::OK);
 	}
+
+	// signal that the thread is still alive after pick insertion
+	setThreadHealth();
 
 	// are we configured to check pick noise classification
 	if (CGlass::getPickNoiseClassificationThreshold() > 0) {
@@ -575,6 +581,9 @@ glass3::util::WorkState CPickList::work() {
 	// Attempt to associate the pick
 	CGlass::getHypoList()->associateData(pick);
 
+	// signal that the thread is still alive after pick insertion
+	setThreadHealth();
+
 	// check to see if the pick is currently associated to a hypo
 	std::shared_ptr<CHypo> pHypo = pick->getHypoReference();
 	if (pHypo != NULL) {
@@ -604,7 +613,26 @@ glass3::util::WorkState CPickList::work() {
 
 	// Attempt nucleation unless we were told not to.
 	if (bNucleateThisPick == true) {
-		pick->nucleate();
+		// timing code
+		std::chrono::high_resolution_clock::time_point tStartTime =
+			std::chrono::high_resolution_clock::now();
+
+		pick->nucleate(this);
+
+		std::chrono::high_resolution_clock::time_point tEndTime =
+			std::chrono::high_resolution_clock::now();
+
+		double nucleateTime =
+			std::chrono::duration_cast<std::chrono::duration<double>>(
+					tEndTime - tStartTime).count();
+
+		if (nucleateTime > 300.0) {
+			glass3::util::Logger::log(
+				"debug",
+				"CPickList::work: Pick " + pick->getSite()->getSCNL()
+						+ " took " + std::to_string(nucleateTime)
+						+ " seconds to nucleate.");
+		}
 	}
 
 	// give up some time at the end of the loop

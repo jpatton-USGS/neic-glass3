@@ -615,7 +615,8 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 
 				// site quality metrics
 				stationObject.quality = (siteObject)["Qual"].ToDouble();
-				stationObject.enable = (siteObject)["Use"].ToBool();
+				stationObject.enable = (siteObject)["Enable"].ToBool();
+				stationObject.use = (siteObject)["Use"].ToBool();
 				stationObject.useforteleseismic =
 						(siteObject)["UseForTele"].ToBool();
 

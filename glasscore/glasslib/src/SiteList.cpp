@@ -407,7 +407,8 @@ std::shared_ptr<json::Object> CSiteList::generateSiteListMessage(bool send) {
 		stationObj["Lon"] = site->getRawLongitude();
 		stationObj["Z"] = site->getRawElevation();
 		stationObj["Qual"] = site->getQuality();
-		stationObj["Use"] = site->getEnable();
+		stationObj["Enable"] = site->getEnable();
+		stationObj["Use"] = site->getUse();
 		stationObj["UseForTele"] = site->getUseForTeleseismic();
 
 		stationObj["Sta"] = site->getSite();

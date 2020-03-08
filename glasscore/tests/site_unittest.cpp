@@ -26,6 +26,7 @@
 #define GEOCENTRIC_ELEVATION 6373.326
 #define SITE2DISTANCE 109.66700963282658
 #define SITE2DELTA 0.017241728546897175
+#define ENABLE true
 #define USE true
 #define USEFORTELE true
 
@@ -136,7 +137,7 @@ TEST(SiteTest, Construction) {
 	ASSERT_STREQ("", testSite->getNetwork().c_str())<< "sNet Empty";
 	ASSERT_STREQ("", testSite->getLocation().c_str())<< "sLoc Empty";
 
-	ASSERT_EQ(true, testSite->getUse())<< "bUse false";
+	ASSERT_EQ(true, testSite->getUse())<< "bUse true";
 	ASSERT_EQ(true, testSite->getUseForTeleseismic())<< "bUseForTele false";
 	ASSERT_EQ(1, testSite->getQuality())<< "dQual one";
 
@@ -156,6 +157,7 @@ TEST(SiteTest, Construction) {
 							std::string(LOC), LATITUDE, LONGITUDE,
 							ELEVATION,
 							QUALITY,
+							ENABLE,
 							USE,
 							USEFORTELE);
 
@@ -358,6 +360,7 @@ TEST(SiteTest, FailTests) {
 							std::string(NET), std::string(LOC), LATITUDE, LONGITUDE,
 							ELEVATION,
 							QUALITY,
+							ENABLE,
 							USE,
 							USEFORTELE));
 
@@ -366,6 +369,7 @@ TEST(SiteTest, FailTests) {
 							std::string(""), std::string(LOC), LATITUDE, LONGITUDE,
 							ELEVATION,
 							QUALITY,
+							ENABLE,
 							USE,
 							USEFORTELE));
 
@@ -374,6 +378,7 @@ TEST(SiteTest, FailTests) {
 							std::string(NET), std::string(LOC), BADLATITUDE, LONGITUDE,
 							ELEVATION,
 							QUALITY,
+							ENABLE,
 							USE,
 							USEFORTELE));
 
@@ -382,6 +387,7 @@ TEST(SiteTest, FailTests) {
 							std::string(NET), std::string(LOC), LATITUDE, BADLONGITUDE,
 							ELEVATION,
 							QUALITY,
+							ENABLE,
 							USE,
 							USEFORTELE));
 
@@ -390,6 +396,7 @@ TEST(SiteTest, FailTests) {
 							std::string(NET), std::string(LOC), LATITUDE, LONGITUDE,
 							BADELEVATION,
 							QUALITY,
+							ENABLE,
 							USE,
 							USEFORTELE));
 

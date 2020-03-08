@@ -243,9 +243,9 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * by this web, filtering out unused/disabled sites and sites excluded by
 	 * the site filters via isSiteAllowed(). This list is stored in vSite.
 	 *
-	 * \return Always returns true
+	 * \return Returns the count of sites loaded
 	 */
-	bool loadWebSiteList();
+	int loadWebSiteList();
 
 	/**
 	 * \brief Sort site list

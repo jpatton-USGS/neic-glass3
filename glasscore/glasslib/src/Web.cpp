@@ -962,7 +962,21 @@ bool CWeb::loadGridConfiguration(
 	loadSiteFilters(gridConfiguration);
 
 	// Generate eligible station list
-	loadWebSiteList();
+	int siteListSize = loadWebSiteList();
+
+	// check size
+	if (siteListSize <= 0) {
+		glass3::util::Logger::log(
+			"error",
+			"CWeb::loadGridConfiguration: No available sites for web: " + m_sName
+			+ ".");
+		return(false);
+	} else {
+		glass3::util::Logger::log(
+			"info",
+			"CWeb::loadGridConfiguration: " + std::to_string(siteListSize) +
+			" sites available for web: " + m_sName + ".");
+	}
 
 	// Load zone statistics
 	if (!m_sZoneStatsFileName.empty()) {
@@ -1293,7 +1307,7 @@ bool CWeb::isSiteAllowed(std::shared_ptr<CSite> site, bool checkEnabled) {
 	if (checkEnabled == true) {
 		// if the site has been disabled, return false
 		// use includes checking enable flag
-		if (!site->getUse()) {
+		if (!site->getIsUsed()) {
 			return(false);
 		}
 		// check quality
@@ -1342,13 +1356,13 @@ bool CWeb::isSiteAllowed(std::shared_ptr<CSite> site, bool checkEnabled) {
 }
 
 // ---------------------------------------------------------loadWebSiteList
-bool CWeb::loadWebSiteList() {
+int CWeb::loadWebSiteList() {
 	// nullchecks
 	// check pSiteList
 	if (m_pSiteList == NULL) {
 		glass3::util::Logger::log(
 				"error", "CWeb::loadWebSiteList: NULL pSiteList pointer.");
-		return (false);
+		return (0);
 	}
 
 	// check to see if the site list has changed since we last asked
@@ -1357,10 +1371,20 @@ bool CWeb::loadWebSiteList() {
 	if (tUpdated > m_tLastUpdated) {
 		m_tLastUpdated = tUpdated;
 	} else {
-		glass3::util::Logger::log(
-				"debug", "CWeb::loadWebSiteList: Site List already up to date.");
-		// our site list is already the latest
-		return(true);
+		// glass3::util::Logger::log(
+		// "debug", "CWeb::loadWebSiteList: Site List already up to date.");
+
+		// lock the site list while we are rebuilding it
+		while ((m_vSiteMutex.try_lock() == false) &&
+						(getTerminate() == false)) {
+			// update thread status
+			setThreadHealth(true);
+		}
+		int size = vWebSites.size();
+		m_vSiteMutex.unlock();
+
+		// our site list is already the latest, return current size
+		return(size);
 	}
 
 	// git all the sites in pSiteList
@@ -1374,7 +1398,7 @@ bool CWeb::loadWebSiteList() {
 	if (nsite <= 0) {
 		glass3::util::Logger::log(
 				"warning", "CWeb::loadWebSiteList: No sites in new site list.");
-		return (false);
+		return (0);
 	}
 
 	// lock the site list while we are rebuilding it
@@ -1408,16 +1432,18 @@ bool CWeb::loadWebSiteList() {
 		setThreadHealth(true);
 	}
 
+	int newSize = vWebSites.size();
+
 	m_vSiteMutex.unlock();
 
 	// log
-	char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
-	snprintf(sLog, sizeof(sLog),
-			"CWeb::loadWebSiteList: selected %d allowed sites out of %d for web %s",
-			static_cast<int>(vWebSites.size()), nsite, m_sName.c_str());
-	glass3::util::Logger::log("debug", sLog);
+	// char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
+	// snprintf(sLog, sizeof(sLog),
+	// "CWeb::loadWebSiteList: selected %d allowed sites out of %d for web %s",
+	// newSize, nsite, m_sName.c_str());
+	// glass3::util::Logger::log("debug", sLog);
 
-	return (true);
+	return (newSize);
 }
 
 // ---------------------------------------------------------sortSiteListForNode
@@ -1743,7 +1769,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	}
 
 	// log what we're going to do
-	if (site->getUse() == true) {
+	if (site->getIsUsed() == true) {
 		glass3::util::Logger::log(
 			"debug",
 			"CWeb::updateSite: Trying to add/update site " + site->getSCNL()
@@ -1775,8 +1801,16 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	}
 
 	// update the web site list from the master list in SiteList
-	// handels redundant updates
-	loadWebSiteList();
+	// handles redundant updates
+	int siteListSize = loadWebSiteList();
+
+	// check size
+	if (siteListSize <= 0) {
+		glass3::util::Logger::log(
+			"error",
+			"CWeb::updateSite: No available sites for web: " + m_sName + ".");
+		return;
+	}
 
 	// grab a copy of the site vector for our use
 	std::vector<std::pair<double, std::shared_ptr<CSite>>>
@@ -1809,7 +1843,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		// should try to avoid re-rebuilding the node over and over for no good
 		// purpose
 		std::string whatDo = "";
-		if (site->getUse() == true) {
+		if (site->getIsUsed() == true) {
 			// use/enable true means add/update
 			// do we have this site
 			std::shared_ptr<CSite> oldSite = node->getSite(site->getSCNL());
@@ -1877,15 +1911,15 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		sites = sortSiteListForNode(node->getLatitude(), node->getLongitude(),
 			node->getDepth(), sites);
 
-		// its easier to just regenerate the node links than rat through
-		// and figure out where to add / remove / update the new station.
-		// so rebuild the node
+		// its easier (logically) to just regenerate the node links than rat through
+		// and figure out where/how to add / remove / update the new station.
+		// so just rebuild the node
 		generateNodeSites(node, sites);
 
 		// we've modified a node
 		nodeModCount++;
 
-		// modding by 1000 ensures we don't get that many log entries
+		// log, but modding by 1000 to ensure we don't get too many log entries
 		if (nodeCount % 1000 == 0) {
 			glass3::util::Logger::log(
 					"debug",
@@ -1909,8 +1943,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	if (nodeModCount > 0) {
 		char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
 		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Station %s modified"
-					" %d node(s) in web: %s in %f seconds",
-					site->getSCNL().c_str(), nodeModCount, m_sName.c_str(), updateTime);
+					" %d node(s) in web: %s in %f seconds, %d sits in web",
+					site->getSCNL().c_str(), nodeModCount, m_sName.c_str(), updateTime,
+					siteListSize);
 		glass3::util::Logger::log("info", sLog);
 	} else {
 		glass3::util::Logger::log(
