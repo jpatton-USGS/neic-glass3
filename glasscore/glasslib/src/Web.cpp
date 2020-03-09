@@ -1655,14 +1655,14 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 
 	// check distance
 	if (distance < 0) {
-		// glass3::util::Logger::log(
-		// "error",
-		// "CWeb::addSiteToNode: Invalid distance for site "
-		// + newSite->getSCNL() + " for node "
-		// + std::to_string(node->getLatitude())
-		// + "," + std::to_string(node->getLongitude())
-		// + "," + std::to_string(node->getDepth())
-		// + " in web " + m_sName + ".");
+		glass3::util::Logger::log(
+				"error",
+				"CWeb::addSiteToNode: Invalid distance for site "
+						+ newSite->getSCNL() + " for node "
+						+ std::to_string(node->getLatitude())
+						+ "," + std::to_string(node->getLongitude())
+						+ "," + std::to_string(node->getDepth())
+						+ " in web " + m_sName + ".");
 
 		return(false);
 	}
@@ -1713,15 +1713,15 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 
 	// check to make sure we have at least one valid travel time
 	if ((travelTime1 < 0) && (travelTime2 < 0)) {
-		glass3::util::Logger::log(
-				"warning",
-				"CWeb::addSiteToNode: No valid travel times for site "
-						+ newSite->getSCNL() + " for " + phase1 + " or " + phase2
-						+ " at distance: " + std::to_string(distance)
-						+ " for node " + std::to_string(node->getLatitude())
-						+ "," + std::to_string(node->getLongitude())
-						+ "," + std::to_string(node->getDepth())
-						+ " in web " + m_sName + ".");
+		// glass3::util::Logger::log(
+		// "warning",
+		// "CWeb::addSiteToNode: No valid travel times for site "
+		// + newSite->getSCNL() + " for " + phase1 + " or " + phase2
+		// + " at distance: " + std::to_string(distance)
+		// + " for node " + std::to_string(node->getLatitude())
+		// + "," + std::to_string(node->getLongitude())
+		// + "," + std::to_string(node->getDepth())
+		// + " in web " + m_sName + ".");
 
 		return(false);
 	}
