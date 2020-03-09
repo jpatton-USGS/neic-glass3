@@ -1852,6 +1852,8 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 
 	m_vSiteMutex.unlock();
 
+	std::string whatDo = "";
+
 	// for each node in web
 	for (auto &node : m_vNode) {
 		nodeCount++;
@@ -1876,7 +1878,6 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		// effectively handled by the rebuild before their turn comes up, so we
 		// should try to avoid re-rebuilding the node over and over for no good
 		// purpose
-		std::string whatDo = "";
 		if (site->getIsUsed() == true) {
 			// use/enable true means add/update
 			// do we have this site
@@ -1985,18 +1986,17 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	// log info if we've updated any node with this site
 	if (nodeModCount > 0) {
 		char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
-		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Station %s modified"
-					" %d node(s) in web: %s in %f seconds, %d sits in web",
-					site->getSCNL().c_str(), nodeModCount, m_sName.c_str(), updateTime,
-					siteListSize);
+		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Station %s modified (%s)"
+					" %d node(s) out of %d in web: %s in %.2f seconds, %d sites in web",
+					site->getSCNL().c_str(), whatDo.c_str(), nodeModCount, totalNodes,
+					m_sName.c_str(), updateTime, siteListSize);
 		glass3::util::Logger::log("info", sLog);
 	} else {
-		glass3::util::Logger::log(
-				"debug",
-				"CWeb::updateSite: Station " + site->getSCNL()
-						+ " did not modify in any "
-						"nodes in web: " + m_sName + " in " + std::to_string(updateTime)
-						+ " seconds.");
+		char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
+		snprintf(sLog, sizeof(sLog), "CWeb::updateSite: Station %s did not modify "
+					"(%s) any nodes in web: %s in %.2f seconds",
+					site->getSCNL().c_str(), whatDo.c_str(), m_sName.c_str(), updateTime);
+		glass3::util::Logger::log("info", sLog);
 	}
 }
 
