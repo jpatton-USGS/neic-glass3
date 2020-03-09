@@ -583,6 +583,12 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	std::atomic<double> m_dMaxDepth;
 
 	/**
+	 * \brief A double which describes the web specific maximum allowable site
+	 * node distance in degrees
+	 **/
+	std::atomic<double> m_dMaxSiteDistance;
+
+	/**
 	 * \brief A double which describes the web depth layer resolution
 	 **/
 	std::atomic<double> m_dDepthResolution;

@@ -91,6 +91,7 @@ void CWeb::clear() {
 	m_bSaveGrid = false;
 	m_dAzimuthTaper = k_dAzimuthTaperDefault;
 	m_dMaxDepth = CGlass::k_dMaximumDepth;
+	m_dMaxSiteDistance = -1;
 
 	// clear out all the nodes in the web
 	try {
@@ -1280,7 +1281,7 @@ bool CWeb::loadSiteFilters(std::shared_ptr<json::Object> gridConfiguration) {
 						+ std::to_string(m_bUseOnlyTeleseismicStations) + ".");
 	}
 
-	// check to see if we're only to use teleseismic stations.
+	// check to see if we have a quality filter
 	if ((*gridConfiguration).HasKey("QualityFilter")
 			&& ((*gridConfiguration)["QualityFilter"].GetType()
 					== json::ValueType::DoubleVal)) {
@@ -1293,6 +1294,21 @@ bool CWeb::loadSiteFilters(std::shared_ptr<json::Object> gridConfiguration) {
 						+ std::to_string(m_dQualityFilter) + ".");
 	} else {
 		m_dQualityFilter = -1.0;
+	}
+
+	// check to see if we have a max site distance filter
+	if ((*gridConfiguration).HasKey("MaxSiteDistance")
+			&& ((*gridConfiguration)["MaxSiteDistance"].GetType()
+					== json::ValueType::DoubleVal)) {
+		m_dMaxSiteDistance =
+				(*gridConfiguration)["MaxSiteDistance"].ToDouble();
+
+		glass3::util::Logger::log(
+				"debug",
+				"CWeb::genSiteFilters: m_dMaxSiteDistance is "
+						+ std::to_string(m_dMaxSiteDistance) + ".");
+	} else {
+		m_dMaxSiteDistance = -1.0;
 	}
 
 	return (true);
@@ -1602,6 +1618,16 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 		// get the site distance pair
 		auto sitePair = *it;
 
+		// if we have a maximum node-site distance
+		if (m_dMaxSiteDistance > 0) {
+			// skip if site pair past maximum node-site distance
+			// note that site pair distance is in radians
+			if ((sitePair.first * glass3::util::GlassMath::k_RadiansToDegrees) >
+					m_dMaxSiteDistance) {
+				continue;
+			}
+		}
+
 		// get the site from the second part of the pair
 		std::shared_ptr<CSite> site = sitePair.second;
 
@@ -1665,6 +1691,14 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 						+ " in web " + m_sName + ".");
 
 		return(false);
+	}
+
+	// if we have a maximum node-site distance
+	if (m_dMaxSiteDistance > 0) {
+		// skip if site past maximum node-site distance
+		if (distance > m_dMaxSiteDistance) {
+			return(false);
+		}
 	}
 
 	// lock the travel times so it is constant while we build the node
@@ -1870,6 +1904,15 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 				// compute the distance to farthest site
 				double maxDistance = glass3::util::GlassMath::k_RadiansToDegrees
 						* geo.delta(&furthestSite->getGeo());
+
+				// if we have a maximum node-site distance
+				if (m_dMaxSiteDistance > 0) {
+					// Ignore (skip) this add if new site is farther than the max
+					// node-site distance
+					if (newDistance > m_dMaxSiteDistance) {
+						continue;
+					}
+				}
 
 				// Ignore (skip) this add if new site is farther than last linked site,
 				// and if this node has the maximum number of sites (no more space)

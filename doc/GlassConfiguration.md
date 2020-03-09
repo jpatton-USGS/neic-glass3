@@ -1,7 +1,9 @@
 # Glass3 Configuration
 
 ## Example
+
 An example `glass_init.d` configuration file:
+
 ```json
 {
   "Cmd": "Initialize",
@@ -81,6 +83,7 @@ An example `glass_init.d` configuration file:
 ```
 
 ## General Configuration
+
 These configuration parameters define overall glasscore variables. All values
 should be greater than zero.
 
@@ -123,6 +126,7 @@ should reject new duplicate picks of an existing pick (false) or update an
 existing pick with the latest duplicate pick (true).
 
 ## Nucleation Configuration
+
 These configuration parameters define and control glasscore nucleation and
 association. All values should be greater than zero, but exact limits are still
 being determined.
@@ -174,6 +178,7 @@ event fragment, in combination with  **EventFragmentAzimuthThreshold**.
 event fragment, in combination with **EventFragmentDepthThreshold**.
 
 ## Pick Classification Configuration
+
 These configuration parameters define the thresholds to use when glass processes
 picks with optional classification information from external algorithms
 
@@ -184,15 +189,19 @@ accepts the classification of the phase of a new pick. Classified picks are
 nucleated/associated according to the given phase.
 
 ### DefaultNucleationPhase
+
 This parameter defines the default nucleation phase for glass. This value can be
 overridden in a detection grid (Web) if provided as part of a specific grid
 configuration.
+
 * **PhaseName** - The name of the default nucleation phase
 * **TravFile** - The path to the travel-time lookup file for the default
 nucleation phase.
 
 ### Association Phases
+
 A list of phases to use for association.
+
 * **PhaseName** - The name of the association phase
 * **Assoc** - The association range [Minimum, Maximum] for this phase.  Mutually
 exclusive with **Range**
@@ -202,10 +211,12 @@ this association phase.  Mutually exclusive with **Assoc**
 phase.
 
 ## Grid Configuration
+
 GLASS 3 uses detection grids (or webs) of nodes to nucleate detections. In
 general, there are two types of grids, Regional/Local grids, and Global grids.
 
 ## General Parameters
+
 These configuration parameters are common to all GLASS 3 Detection grids.
 
 * **Name** - The name of this detection grid
@@ -219,14 +230,14 @@ Nucleation Parameters
 a grid.
 * **NucleationPhases** - The one or two phases to use for nucleation in a grid,
 if not present, the grid will use the DefaultNucleationPhase
-	* **Phase1** - The primary nucleation phase for a grid
-		* **PhaseName** - The name of the primary nucleation phase
-		* **TravFile** - The path to the travel-time lookup file for the primary
+  * **Phase1** - The primary nucleation phase for a grid
+    * **PhaseName** - The name of the primary nucleation phase
+    * **TravFile** - The path to the travel-time lookup file for the primary
     nucleation phase.
-	* **Phase2** - The optional secondary nucleation phase for a grid, generally
+  * **Phase2** - The optional secondary nucleation phase for a grid, generally
   only used in regional and local grids.
-		* **PhaseName** - The name of the secondary nucleation phase
-		* **TravFile** - The path to the travel-time lookup file for the secondary
+    * **PhaseName** - The name of the secondary nucleation phase
+    * **TravFile** - The path to the travel-time lookup file for the secondary
     nucleation phase.
 * **IncludeNetworks** - A list of network codes limit the stations available to
 a grid, a station must have one of the given network codes to be used in the grid
@@ -238,6 +249,8 @@ only in global grids.
 * **DepthLayers** - The list of depth layers for a grid in kilometers
 * **MaximumDepth** - The web specific maximum allowable locator depth in
 kilometers
+* **MaxSiteDistance** - The web specific maximum allowable node-site distance in
+degrees
 * **AzimuthGapTaper** - The web specific value in degrees where the locator
 should start down weighting for azimuthal gap
 * **NodeResolution** - The desired inter-node resolution (or spacing) for a grid
@@ -255,82 +268,93 @@ from nodes. Note that if Update is false, features like **SiteHoursWithoutPickin
 and **SiteLookupInterval** will be omitted for this grid.
 
 ## Regional / Local Grid
+
 This is a detection grid designed to cover some regional or local area of
 interest, with the provided depth layers.
-### Example:
+
+### Regional / Local Example
+
 ```json
 {
-	"Cmd": "Grid",
-	"Name": "Oklahoma",
-	"NucleationStackThreshold": 0.5,
-	"NucleationDataCountThreshold": 6,
-	"NumStationsPerNode": 10,
-	"NucleationPhases":{
-	    "Phase1": {
-      		"PhaseName": "P",
-      		"TravFile": "./P.trv"
-  		},
-	    "Phase2": {
-      		"PhaseName": "S",
-      		"TravFile": "./S.trv"
-  		}
-	},
-	"IncludeNetworks": ["OK", "US", "N4"],
+  "Cmd": "Grid",
+  "Name": "Oklahoma",
+  "NucleationStackThreshold": 0.5,
+  "NucleationDataCountThreshold": 6,
+  "NumStationsPerNode": 10,
+  "NucleationPhases":{
+      "Phase1": {
+          "PhaseName": "P",
+          "TravFile": "./P.trv"
+      },
+      "Phase2": {
+          "PhaseName": "S",
+          "TravFile": "./S.trv"
+      }
+  },
+  "IncludeNetworks": ["OK", "US", "N4"],
   "UseOnlyTeleseismicStations": false,
-	"CenterLatitude": 36.0,
-	"CenterLongitude": -97.5,
-	"DepthLayers": [ 10.0, 30.0 ],
+  "CenterLatitude": 36.0,
+  "CenterLongitude": -97.5,
+  "DepthLayers": [ 10.0, 30.0 ],
   "MaximumDepth": 900.0,
+  "MaxSiteDistance": 90.0,
   "AzimuthGapTaper": 360.0,
-	"NodeResolution": 25.0,
-	"NumberOfRows": 51,
-	"NumberOfColumns": 51,
+  "NodeResolution": 25.0,
+  "NumberOfRows": 51,
+  "NumberOfColumns": 51,
   "ZoneStatsFile": "./qa_zonestats.txt",
   "DepthResolution": 125.0,  
-	"SaveGrid": true,
+  "SaveGrid": true,
   "UpdateGrid": true
 }
 ```
+
 ### Parameters
+
 These parameters are specific to Regional / Local Grids.
+
 * **CenterLatitude** - The latitude of the center point of this detection grid
 * **CenterLongitude** - The longitude of the center point of this detection grid
 * **NumberOfRows** - The number of rows (height) of this detection grid in nodes.
 * **NumberOfColumns** - The number of columns (width) of this detection grid in nodes.
 
 ## Global Grid
+
 This is a detection grid that is designed to cover the globe with equally spaced
 detection nodes at the provided depth layers.
-### Example
+
+### Global Example
+
 ```json
 {
-	"Cmd": "Global",
-	"Name": "Global",
-	"NucleationStackThreshold": 0.5,
-	"NucleationDataCountThreshold": 6,
-	"NumStationsPerNode": 24,
-	"NucleationPhases":
-	{
-		"Phase1":
-		{
-			"PhaseName": "P",
-			"TravFile": "./P.trv"
-		},
-		"Phase2":
-		{
-			"PhaseName": "S",
-			"TravFile": "./S.trv"
-		}
-	},
-	"IncludeNetworks": ["IU", "US", "II", "CU", "G", "GE", "IM", "IC", "GT", "C", "AU", "MX", "AT"],
+  "Cmd": "Global",
+  "Name": "Global",
+  "NucleationStackThreshold": 0.5,
+  "NucleationDataCountThreshold": 6,
+  "NumStationsPerNode": 24,
+  "NucleationPhases":
+  {
+    "Phase1":
+    {
+      "PhaseName": "P",
+      "TravFile": "./P.trv"
+    },
+    "Phase2":
+    {
+      "PhaseName": "S",
+      "TravFile": "./S.trv"
+    }
+  },
+  "IncludeNetworks": ["IU", "US", "II", "CU", "G", "GE", "IM", "IC", "GT", "C", "AU", "MX", "AT"],
   "UseOnlyTeleseismicStations": true,
-	"DepthLayers": [10.0, 30.0, 50.0, 100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 750.0],
+  "DepthLayers": [10.0, 30.0, 50.0, 100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 750.0],
   "MaximumDepth": 900.0,
+  "MaxSiteDistance": 180.0,
   "AzimuthGapTaper": 360.0,
-	"NodeResolution": 100.0,
+  "NodeResolution": 100.0,
   "ZoneStatsFile": "./qa_zonestats.txt",
   "DepthResolution": 125.0,
-	"SaveGrid": false,
+  "SaveGrid": false,
   "UpdateGrid": true
 }
 ```

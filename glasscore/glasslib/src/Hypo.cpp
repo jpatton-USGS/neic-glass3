@@ -323,11 +323,11 @@ void CHypo::addCorrelationReference(std::shared_ptr<CCorrelation> corr) {
 	std::lock_guard < std::recursive_mutex > guard(m_HypoMutex);
 
 	// for each correlation in the vector
-	for (auto q : m_vCorrelationData) {
+	for (auto aCorr : m_vCorrelationData) {
 		// see if we have this same correlation
 		// NOTE: this only checks by ID, need to improve this to
 		// an ID/Source check
-		if (q->getID() == corr->getID()) {
+		if (aCorr->getID() == corr->getID()) {
 			char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
 			snprintf(sLog, sizeof(sLog),
 						"CHypo::addCorrelation: ** Duplicate correlation %s",
@@ -356,9 +356,9 @@ void CHypo::addPickReference(std::shared_ptr<CPick> pck) {
 	std::lock_guard < std::recursive_mutex > guard(m_HypoMutex);
 
 	// for each pick in the vector
-	for (auto q : m_vPickData) {
+	for (auto aPick : m_vPickData) {
 		// see if we have this same pick
-		if (q->getID() == pck->getID()) {
+		if (aPick->getID() == pck->getID()) {
 			// Don't add this duplicate pick
 			return;
 		}
@@ -2091,9 +2091,9 @@ bool CHypo::hasCorrelationReference(std::shared_ptr<CCorrelation> corr) {
 	std::lock_guard < std::recursive_mutex > guard(m_HypoMutex);
 
 	// for each corr in the vector
-	for (const auto &q : m_vCorrelationData) {
+	for (const auto &aCorr : m_vCorrelationData) {
 		// is this corr a match?
-		if (q->getID() == corr->getID()) {
+		if (aCorr->getID() == corr->getID()) {
 			return (true);
 		}
 	}
@@ -2113,9 +2113,9 @@ bool CHypo::hasPickReference(std::shared_ptr<CPick> pck) {
 	std::lock_guard < std::recursive_mutex > guard(m_HypoMutex);
 
 	// for each pick in the vector
-	for (const auto &q : m_vPickData) {
+	for (const auto &aPick : m_vPickData) {
 		// is this pick a match?
-		if (q->getID() == pck->getID()) {
+		if (aPick->getID() == pck->getID()) {
 			return (true);
 		}
 	}
@@ -3077,20 +3077,20 @@ void CHypo::trap() {
 	char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
 
 	// for each pick in this hypocenter
-	for (const auto &q : m_vPickData) {
-		if (q == NULL) {
+	for (const auto &aPick : m_vPickData) {
+		if (aPick == NULL) {
 			continue;
 		}
 
 		// get the pick's hypo pointer
-		std::shared_ptr<CHypo> hyp = q->getHypoReference();
+		std::shared_ptr<CHypo> hyp = aPick->getHypoReference();
 
 		// check pointer
 		if (hyp == NULL) {
 			// bad hypo pointer
 			snprintf(sLog, sizeof(sLog),
 						"CHypo::trap: sPid %s Pick %s has no back link to hypo",
-						m_sID.c_str(), q->getID().c_str());
+						m_sID.c_str(), aPick->getID().c_str());
 			glass3::util::Logger::log("warning", sLog);
 
 			continue;
@@ -3102,7 +3102,7 @@ void CHypo::trap() {
 			snprintf(
 					sLog, sizeof(sLog),
 					"CHypo::trap: sPid %s Pick: %s linked to another hypo: %s",
-					m_sID.c_str(), q->getID().c_str(), hyp->getID().c_str());
+					m_sID.c_str(), aPick->getID().c_str(), hyp->getID().c_str());
 			glass3::util::Logger::log("warning", sLog);
 		}
 	}
