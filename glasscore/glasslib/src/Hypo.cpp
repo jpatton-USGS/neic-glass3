@@ -485,7 +485,6 @@ double CHypo::anneal(int nIter, double dStart, double dStop, double tStart,
 	std::lock_guard < std::recursive_mutex > guard(m_HypoMutex);
 
 	// This is essentially a faster algorithmic implementation of iterate
-	glass3::util::Logger::log("debug", "CHypo::anneal. " + m_sID);
 
 	// *** First, locate ***
 	if (CGlass::getMinimizeTTLocator() == false) {
@@ -571,6 +570,9 @@ double CHypo::anneal(int nIter, double dStart, double dStop, double tStart,
 		// remove the pick from this hypo
 		removePickReference(pick);
 	}
+
+	glass3::util::Logger::log("debug", "CHypo::anneal. " + m_sID + " bayes: " +
+		std::to_string(m_dBayesValue));
 
 	// return the final bayesian value
 	return (m_dBayesValue);
@@ -2446,7 +2448,7 @@ double CHypo::localize() {
 	// Localize this hypo
 	char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
 
-	glass3::util::Logger::log("debug", "CHypo::localize. " + m_sID);
+	// glass3::util::Logger::log("debug", "CHypo::localize. " + m_sID);
 
 	// if hypo is fixed, just return current bayesian value
 	// NOTE: What implication does this have for "seed hypos" like twitter
@@ -2567,7 +2569,7 @@ bool CHypo::pruneData() {
 		return (false);
 	}
 
-	glass3::util::Logger::log("debug", "CHypo::prune. " + m_sID);
+	// glass3::util::Logger::log("debug", "CHypo::prune. " + m_sID);
 
 	// set up local vector to track picks to remove
 	std::vector < std::shared_ptr < CPick >> vremove;
@@ -2628,7 +2630,8 @@ bool CHypo::pruneData() {
 
 	glass3::util::Logger::log(
 			"debug",
-			"CHypo::prune pick pruneCount:" + std::to_string(pruneCount));
+			"CHypo::prune pick pruneCount:" + std::to_string(pruneCount) + " "
+			+ m_sID);
 
 	// set up local vector to track correlations to remove
 	std::vector < std::shared_ptr < CCorrelation >> vcremove;
@@ -2802,7 +2805,7 @@ bool CHypo::resolveData(std::shared_ptr<CHypo> hyp, bool allowStealing) {
 		return (false);
 	}
 
-	glass3::util::Logger::log("debug", "CHypo::resolve. " + m_sID);
+	// glass3::util::Logger::log("debug", "CHypo::resolve. " + m_sID);
 
 	bool bAssoc = false;
 	char sLog[glass3::util::Logger::k_nMaxLogEntrySize];

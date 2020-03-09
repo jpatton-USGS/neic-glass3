@@ -546,6 +546,7 @@ bool CPick::nucleate(CPickList* parentThread) {
 		if (trigger->getWeb() == NULL) {
 			continue;
 		}
+		std::string webName = trigger->getWeb()->getName();
 
 		// check to see if the pick is currently associated to a hypo
 		if (m_wpHypo.expired() == false) {
@@ -646,8 +647,8 @@ bool CPick::nucleate(CPickList* parentThread) {
 				snprintf(sLog, sizeof(sLog),
 							"CPick::nucleate: -- Abandoning solution %s "
 							"due to lack of picks "
-							"(npick:%d/ncut:%d)",
-							hypo->getID().c_str(), npick, ncut);
+							"(npick:%d/ncut:%d) web %s",
+							hypo->getID().c_str(), npick, ncut, webName.c_str());
 				glass3::util::Logger::log(sLog);
 
 				// don't bother making additional passes
@@ -662,8 +663,8 @@ bool CPick::nucleate(CPickList* parentThread) {
 				snprintf(sLog, sizeof(sLog),
 							"CPick::nucleate: -- Abandoning solution %s "
 							"due to low bayes value "
-							"(bayes:%f/thresh:%f)",
-							hypo->getID().c_str(), bayes, thresh);
+							"(bayes:%f/thresh:%f) web %s",
+							hypo->getID().c_str(), bayes, thresh, webName.c_str());
 				glass3::util::Logger::log(sLog);
 
 				// don't bother making additional passes
@@ -678,8 +679,8 @@ bool CPick::nucleate(CPickList* parentThread) {
 				snprintf(sLog, sizeof(sLog),
 							"CPick::nucleate: -- Abandoning solution %s "
 							"due to depth greater than max depth "
-							"(depth:%f/maxDepth:%f)",
-							hypo->getID().c_str(), depth, maxDepth);
+							"(depth:%f/maxDepth:%f) web %s",
+							hypo->getID().c_str(), depth, maxDepth, webName.c_str());
 				glass3::util::Logger::log(sLog);
 
 				// don't bother making additional passes
