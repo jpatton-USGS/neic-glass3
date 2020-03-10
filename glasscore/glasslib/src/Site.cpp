@@ -1,4 +1,7 @@
 #include "Site.h"
+
+#include <date.h>
+
 #include <json.h>
 #include <logger.h>
 #include <geo.h>
@@ -80,6 +83,7 @@ CSite::CSite(std::shared_ptr<json::Object> site) {
 	bool enable = true;
 	bool use = true;
 	bool useForTeleseismic = true;
+	int tLastPicked = -1;
 
 	// get site information from json
 	// scnl
@@ -224,6 +228,17 @@ CSite::CSite(std::shared_ptr<json::Object> site) {
 		useForTeleseismic = true;
 	}
 
+	// time of last pick (if present)
+	if (((*site).HasKey("TimeLastPicked"))
+			&& ((*site)["TimeLastPicked"].GetType()
+					== json::ValueType::StringVal)) {
+		std::string timeString = (*site)["TimeLastPicked"].ToString();
+		tLastPicked =
+			static_cast<int>(glass3::util::Date::convertISO8601ToEpochTime(timeString));
+	} else {
+		tLastPicked = -1;
+	}
+
 	// make sure we got a valid lat/lon/elev
 	if ((latitude == 0) && (longitude == 0) && (elevation == 0)) {
 		glass3::util::Logger::log(
@@ -234,6 +249,12 @@ CSite::CSite(std::shared_ptr<json::Object> site) {
 	// pass to initialization function
 	initialize(station, channel, network, location, latitude, longitude,
 				elevation, quality, enable, use, useForTeleseismic);
+
+	// update m_tLastPickAdded IF we have a valid value
+	// from the json
+	if (tLastPicked > 0) {
+		m_tLastPickAdded = tLastPicked;
+	}
 }
 
 // --------------------------------------------------------initialize

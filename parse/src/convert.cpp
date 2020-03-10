@@ -1,4 +1,7 @@
 #include <convert.h>
+
+#include <date.h>
+
 #include <json.h>
 #include <logger.h>
 #include <stringutil.h>
@@ -7,6 +10,7 @@
 #include <ctime>
 #include <vector>
 #include <memory>
+
 
 // JSON Keys
 #define TYPE_KEY "Type"
@@ -603,7 +607,7 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 				// network is required
 				stationObject.site.network = (siteObject)["Net"].ToString();
 
-				// lcation is optional
+				// location is optional
 				if (siteObject.HasKey("Loc")) {
 					stationObject.site.location = (siteObject)["Loc"].ToString();
 				}
@@ -620,11 +624,34 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 				stationObject.useforteleseismic =
 						(siteObject)["UseForTele"].ToBool();
 
+				int tLastPicked = -1;
+				if (siteObject.HasKey("LastPicked")) {
+					 tLastPicked = (siteObject)["LastPicked"].ToInt();
+				}
+
 				// check for validity
 				if (stationObject.isvalid() == true) {
-					// add to array
+					// convert to json document
 					rapidjson::Document stationJSON(rapidjson::kObjectType);
 					stationObject.tojson(stationJSON, allocator);
+
+					// add tLastPicked, which isn't technically part of the official
+					// station info format
+					if (tLastPicked > 0) {
+						// convert to iso8601
+						std::string timestring =
+							glass3::util::Date::convertEpochTimeToISO8601(
+								static_cast<double>(tLastPicked));
+
+						// create string value
+						rapidjson::Value timevalue;
+						timevalue.SetString(rapidjson::StringRef(timestring.c_str()),
+											allocator);
+
+						stationJSON.AddMember("TimeLastPicked", timevalue, allocator);
+					}
+
+					// add station to array
 					stationListArray.PushBack(stationJSON, allocator);
 				} else {
 					std::vector<std::string> errors = stationObject.geterrors();

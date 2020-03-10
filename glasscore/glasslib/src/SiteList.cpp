@@ -411,6 +411,10 @@ std::shared_ptr<json::Object> CSiteList::generateSiteListMessage(bool send) {
 		stationObj["Use"] = site->getUse();
 		stationObj["UseForTele"] = site->getUseForTeleseismic();
 
+		if(m_iMaxHoursWithoutPicking > 0) {
+			stationObj["LastPicked"] = static_cast<int>(site->getTLastPickAdded());
+		}
+
 		stationObj["Sta"] = site->getSite();
 		if (site->getComponent() != "") {
 			stationObj["Comp"] = site->getComponent();
@@ -540,6 +544,9 @@ glass3::util::WorkState CSiteList::work() {
 		// update thread status
 		setThreadHealth();
 	}
+
+	glass3::util::Logger::log("debug",
+							"CSiteList::work: checking for sites that are now picking");
 
 	// for each unused site in the site list
 	for (auto aSite : sites) {
