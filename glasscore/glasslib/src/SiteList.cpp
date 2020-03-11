@@ -51,6 +51,7 @@ void CSiteList::clear() {
 	m_iMaxPicksPerHour = -1;
 	m_tLastChecked = std::time(NULL);
 	m_tLastUpdated = std::time(NULL);
+	m_tCreated = std::time(NULL);
 }
 
 // -------------------------------------------------------receiveExternalMessage
@@ -411,7 +412,8 @@ std::shared_ptr<json::Object> CSiteList::generateSiteListMessage(bool send) {
 		stationObj["Use"] = site->getUse();
 		stationObj["UseForTele"] = site->getUseForTeleseismic();
 
-		if(m_iMaxHoursWithoutPicking > 0) {
+		int lastPicked = site->getTLastPickAdded();
+		if ((lastPicked > 0) && (m_iMaxHoursWithoutPicking > 0)) {
 			stationObj["LastPicked"] = static_cast<int>(site->getTLastPickAdded());
 		}
 
@@ -495,11 +497,17 @@ glass3::util::WorkState CSiteList::work() {
 		// check for sites that are not picking
 		if (m_iMaxHoursWithoutPicking > 0) {
 			// when was the last pick added to this site
-			time_t tLastPickAdded = aSite->getTLastPickAdded();
+			int tLastPickAdded = aSite->getTLastPickAdded();
+
+			// if we've got no time from site, default tLastPickAdded to when
+			// the sitelist was created (effectively glass startup time)
+			if (tLastPickAdded < 0) {
+				tLastPickAdded = m_tCreated;
+			}
 
 			// have we not seen data?
-			if ((tNow - tLastPickAdded)
-					>= (k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
+			if ((tNow - tLastPickAdded) >
+					(k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
 				glass3::util::Logger::log(
 						"debug",
 						"CSiteList::work: Removing " + aSite->getSCNL()
@@ -540,7 +548,12 @@ glass3::util::WorkState CSiteList::work() {
 			// site list was modified
 			m_tLastUpdated = tNow;
 
-			vModifiedSites.push_back(aSite);
+			// add to modified sites (no duplicates)
+			if(std::find(vModifiedSites.begin(), vModifiedSites.end(), aSite) ==
+				 vModifiedSites.end()) {
+				// did not find in vector, add it
+				vModifiedSites.push_back(aSite);
+			}
 		}
 
 		// update thread status
@@ -566,11 +579,12 @@ glass3::util::WorkState CSiteList::work() {
 		// check or sites that started picking
 		if (m_iMaxHoursWithoutPicking > 0) {
 			// when was the last pick added to this site
-			time_t tLastPickAdded = aSite->getTLastPickAdded();
+			int tLastPickAdded = aSite->getTLastPickAdded();
 
 			// have we seen data?
-			if ((tNow - tLastPickAdded)
-					<= (k_nHoursToSeconds * m_iMaxHoursWithoutPicking)) {
+			if ((tLastPickAdded > 0) &&
+					((tNow - tLastPickAdded) <=
+					(k_nHoursToSeconds * m_iMaxHoursWithoutPicking))) {
 				glass3::util::Logger::log(
 						"debug",
 						"CSiteList::work: Added " + aSite->getSCNL()
@@ -590,7 +604,8 @@ glass3::util::WorkState CSiteList::work() {
 			int picksSinceCheck = aSite->getPickCountSinceCheck();
 
 			// we check every hour, so picks since check is picks per hour
-			if (picksSinceCheck < m_iMaxPicksPerHour) {
+			if ((picksSinceCheck > 0) &&
+					(picksSinceCheck < m_iMaxPicksPerHour)) {
 				glass3::util::Logger::log(
 						"debug",
 						"CSiteList::work: Added " + aSite->getSCNL()
@@ -612,7 +627,12 @@ glass3::util::WorkState CSiteList::work() {
 			// site list was modified
 			m_tLastUpdated = tNow;
 
-			vModifiedSites.push_back(aSite);
+			// add to modified sites (no duplicates)
+			if(std::find(vModifiedSites.begin(), vModifiedSites.end(), aSite) ==
+				 vModifiedSites.end()) {
+				// did not find in vector, add it
+				vModifiedSites.push_back(aSite);
+			}
 		}
 
 		// update thread status

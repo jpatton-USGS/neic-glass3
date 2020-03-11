@@ -399,7 +399,7 @@ void CSite::clear() {
 	vPickMutex.unlock();
 
 	// reset last pick added time
-	m_tLastPickAdded = std::time(NULL);
+	m_tLastPickAdded = -1;
 
 	// reset picks since last check
 	setPickCountSinceCheck(0);
@@ -484,6 +484,8 @@ double CSite::getDelta(glass3::util::Geo *geo2) {
 									"CSite::getDelta: NULL CGeo provided.");
 		return (0);
 	}
+
+	std::lock_guard<std::recursive_mutex> guard(m_SiteMutex);
 
 	// use CGeo to calculate distance in radians
 	return (m_Geo.delta(geo2));
@@ -895,6 +897,7 @@ double CSite::getRawElevation() const {
 // ---------------------------------------------------------getGeo
 glass3::util::Geo CSite::getGeo() {
 	std::lock_guard<std::recursive_mutex> guard(m_SiteMutex);
+
 	// make a copy
 	glass3::util::Geo newGeo(m_Geo);
 

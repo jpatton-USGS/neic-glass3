@@ -294,6 +294,11 @@ class CSiteList : public glass3::util::ThreadBaseClass {
 	 */
 	std::atomic<int> m_tLastUpdated;
 
+	/**
+	 * \brief An integer containing the epoch time that this list was created.
+	 */
+	std::atomic<int> m_tCreated;
+
 	// constants
 	/**
 	 * \brief The factor used to convert hours to seconds

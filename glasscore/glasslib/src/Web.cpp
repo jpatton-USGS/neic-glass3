@@ -1838,6 +1838,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 	// handles redundant updates
 	int siteListSize = loadWebSiteList();
 
+	// get the new site's geographic location
+	glass3::util::Geo siteGeo = site->getGeo();
+
 	// check size
 	if (siteListSize <= 0) {
 		glass3::util::Logger::log(
@@ -1894,7 +1897,6 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 									glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
 
 				// compute delta distance between site and node
-				glass3::util::Geo siteGeo = site->getGeo();
 				double newDistance = glass3::util::GlassMath::k_RadiansToDegrees
 						* siteGeo.delta(&geo);
 
