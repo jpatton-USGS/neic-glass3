@@ -505,6 +505,8 @@ glass3::util::WorkState CSiteList::work() {
 						"CSiteList::work: Removing " + aSite->getSCNL()
 								+ " for not picking in "
 								+ std::to_string(tNow - tLastPickAdded)
+								+ " seconds, limit "
+								+ std::to_string(k_nHoursToSeconds * m_iMaxHoursWithoutPicking)
 								+ " seconds ");
 				disableSite = true;
 			}
@@ -574,6 +576,8 @@ glass3::util::WorkState CSiteList::work() {
 						"CSiteList::work: Added " + aSite->getSCNL()
 								+ " because it has picked within "
 								+ std::to_string(tNow - tLastPickAdded)
+								+ " seconds, limit "
+								+ std::to_string(k_nHoursToSeconds * m_iMaxHoursWithoutPicking)
 								+ " seconds ");
 
 				enableSite = true;
