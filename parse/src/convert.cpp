@@ -217,11 +217,19 @@ std::string hypoToJSONDetection(std::shared_ptr<json::Object> data,
 					json::Object amplitudeobject = (dataobject)["Amplitude"]
 							.ToObject();
 
-					pick.amplitude.ampvalue = (amplitudeobject)["Amplitude"]
-							.ToDouble();
-					pick.amplitude.period =
-							(amplitudeobject)["Period"].ToDouble();
-					pick.amplitude.snr = (amplitudeobject)["SNR"].ToDouble();
+					if (amplitudeobject.HasKey("Amplitude")) {
+						pick.amplitude.ampvalue = (amplitudeobject)["Amplitude"]
+								.ToDouble();
+					}
+
+					if (amplitudeobject.HasKey("Period")) {
+						pick.amplitude.period =
+								(amplitudeobject)["Period"].ToDouble();
+					}
+
+					if (amplitudeobject.HasKey("SNR")) {
+						pick.amplitude.snr = (amplitudeobject)["SNR"].ToDouble();
+					}
 				}
 
 				// add association info
