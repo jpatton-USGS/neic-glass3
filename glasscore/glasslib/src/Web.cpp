@@ -1894,8 +1894,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 									glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
 
 				// compute delta distance between site and node
+				glass3::util::Geo siteGeo = site->getGeo();
 				double newDistance = glass3::util::GlassMath::k_RadiansToDegrees
-						* site->getGeo().delta(&geo);
+						* siteGeo.delta(&geo);
 
 				// get last site in node list
 				// NOTE: this assumes that the node site list is sorted
