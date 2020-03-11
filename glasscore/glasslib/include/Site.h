@@ -383,7 +383,7 @@ class CSite {
 	 * a CGeo object
 	 * \return Returns a glass3::util::Geo object containing the combined location.
 	 */
-	glass3::util::Geo &getGeo();
+	glass3::util::Geo getGeo();
 
 	/**
 	 * \brief Get the SCNL identifier for this site

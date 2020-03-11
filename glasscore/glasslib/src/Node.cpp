@@ -490,9 +490,10 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin,
 							m_dLatitude, m_dLongitude,
 							glass3::util::Geo::k_EarthRadiusKm - m_dDepth);
 
+					glass3::util::Geo siteGeo = pick->getSite()->getGeo();
+
 					// compute azimuth from the azimuth node to site
-					double siteAzimuth = nodeGeo.azimuth(
-							&(pick->getSite()->getGeo()))
+					double siteAzimuth = nodeGeo.azimuth(&siteGeo)
 							* glass3::util::GlassMath::k_RadiansToDegrees;
 
 					// check to see if pick's backazimuth is within the

@@ -305,29 +305,31 @@ class OutputTest : public ::testing::Test {
 	}
 
 	virtual void TearDown() {
-		// need to clean up output files
-		if (std::ifstream(outputfile).good()) {
-			std::remove(outputfile.c_str());
-		}
+		try { 
+			// need to clean up output files
+			if (std::ifstream(outputfile).good()) {
+				std::remove(outputfile.c_str());
+			}
 
-		if (std::ifstream(output2file).good()) {
-			std::remove(output2file.c_str());
-		}
+			if (std::ifstream(output2file).good()) {
+				std::remove(output2file.c_str());
+			}
 
-		if (std::ifstream(output3file).good()) {
-			std::remove(output3file.c_str());
-		}
+			if (std::ifstream(output3file).good()) {
+				std::remove(output3file.c_str());
+			}
 
-		if (std::ifstream(retract3file).good()) {
-			std::remove(retract3file.c_str());
-		}
+			if (std::ifstream(retract3file).good()) {
+				std::remove(retract3file.c_str());
+			}
 
-		// need to clean up output directories
+			// need to clean up output directories
 #ifdef _WIN32
-		RemoveDirectory(outputdirectory.c_str());
+			RemoveDirectory(outputdirectory.c_str());
 #else
-		rmdir(outputdirectory.c_str());
+			rmdir(outputdirectory.c_str());
 #endif
+		} catch (...) {}
 	}
 
 	glass3::fileOutput * OutputThread;

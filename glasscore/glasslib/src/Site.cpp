@@ -232,7 +232,9 @@ CSite::CSite(std::shared_ptr<json::Object> site) {
 	if (((*site).HasKey("TimeLastPicked"))
 			&& ((*site)["TimeLastPicked"].GetType()
 					== json::ValueType::StringVal)) {
+		// read string
 		std::string timeString = (*site)["TimeLastPicked"].ToString();
+		// convert iso8601 time string to epoch time
 		tLastPicked =
 			static_cast<int>(glass3::util::Date::convertISO8601ToEpochTime(timeString));
 	} else {
@@ -251,7 +253,8 @@ CSite::CSite(std::shared_ptr<json::Object> site) {
 				elevation, quality, enable, use, useForTeleseismic);
 
 	// update m_tLastPickAdded IF we have a valid value
-	// from the json
+	// from the json, otherwise the default (time site object was created) will
+	// be used
 	if (tLastPicked > 0) {
 		m_tLastPickAdded = tLastPicked;
 	}
@@ -890,8 +893,13 @@ double CSite::getRawElevation() const {
 }
 
 // ---------------------------------------------------------getGeo
-glass3::util::Geo &CSite::getGeo() {
-	return (m_Geo);
+glass3::util::Geo CSite::getGeo() {
+	std::lock_guard<std::recursive_mutex> guard(m_SiteMutex);
+	// make a copy
+	glass3::util::Geo newGeo(m_Geo);
+
+	// return the copy
+	return (newGeo);
 }
 
 // ---------------------------------------------------------getComponent

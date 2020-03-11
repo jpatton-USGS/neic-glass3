@@ -1,11 +1,11 @@
 #include "Hypo.h"
+#include <geo.h>
 #include <json.h>
 #include <date.h>
 #include <logger.h>
 #include <taper.h>
 #include <glassid.h>
 #include <glassmath.h>
-#include <geo.h>
 #include <cmath>
 #include <string>
 #include <algorithm>
@@ -518,15 +518,16 @@ double CHypo::anneal(int nIter, double dStart, double dStop, double tStart,
 	for (int ipick = 0; ipick < npick; ipick++) {
 		// get the pick
 		auto pick = m_vPickData[ipick];
+		glass3::util::Geo siteGeo = pick->getSite()->getGeo();
 
 		// calculate the travel times
 		double tCal1 = -1;
 		if (m_pNucleationTravelTime1 != NULL) {
-			tCal1 = m_pNucleationTravelTime1->T(&pick->getSite()->getGeo());
+			tCal1 = m_pNucleationTravelTime1->T(&siteGeo);
 		}
 		double tCal2 = -1;
 		if (m_pNucleationTravelTime2 != NULL) {
-			tCal2 = m_pNucleationTravelTime2->T(&pick->getSite()->getGeo());
+			tCal2 = m_pNucleationTravelTime2->T(&siteGeo);
 		}
 
 		// calculate absolute residuals
@@ -979,8 +980,8 @@ bool CHypo::canAssociate(std::shared_ptr<CPick> pick, double sigma,
 	double dAzimuthRange = CGlass::getBeamMatchingAzimuthWindow();
 	// double dDistanceRange = pGlass->getBeamMatchingDistanceWindow();
 
-	// get site
-	std::shared_ptr<CSite> site = pick->getSite();
+	// get site geo
+	glass3::util::Geo siteGeo = pick->getSite()->getGeo();
 
 	// set up a geographic object for this hypo
 	glass3::util::Geo hypoGeo;
@@ -990,7 +991,7 @@ bool CHypo::canAssociate(std::shared_ptr<CPick> pick, double sigma,
 	// check backazimuth if present
 	if (pick->getBackAzimuth() != std::numeric_limits<double>::quiet_NaN()) {
 		// compute azimuth from the site to the node
-		double siteAzimuth = site->getGeo().azimuth(&hypoGeo);
+		double siteAzimuth = siteGeo.azimuth(&hypoGeo);
 
 		// check to see if pick's backazimuth is within the
 		// valid range
@@ -1008,7 +1009,7 @@ bool CHypo::canAssociate(std::shared_ptr<CPick> pick, double sigma,
 				&& (pick->getClassifiedAzimuthProbability()
 						> CGlass::getPickAzimuthClassificationThreshold())) {
 			// set up a geo for azimuth calculations
-			double siteAzimuth = hypoGeo.azimuth(&(site->getGeo()))
+			double siteAzimuth = hypoGeo.azimuth(&siteGeo)
 					* glass3::util::GlassMath::k_RadiansToDegrees;
 			// check to see if pick's azimuth is within the
 			// valid range
@@ -1040,7 +1041,7 @@ bool CHypo::canAssociate(std::shared_ptr<CPick> pick, double sigma,
 	 } */
 
 	// compute distance
-	double siteDistance = hypoGeo.delta(&site->getGeo())
+	double siteDistance = hypoGeo.delta(&siteGeo)
 			/ glass3::util::GlassMath::k_DegreesToRadians;
 
 	// check if distance is beyond cutoff
@@ -1506,11 +1507,11 @@ double CHypo::calculateGap(double lat, double lon, double z) {
 	std::vector<double> azm;
 
 	for (auto pick : m_vPickData) {
-		// get the site
-		std::shared_ptr<CSite> site = pick->getSite();
+		// get the site geo
+		glass3::util::Geo siteGeo = pick->getSite()->getGeo();
 
 		// compute the azimuth
-		double azimuth = geo.azimuth(&site->getGeo())
+		double azimuth = geo.azimuth(&siteGeo)
 				/ glass3::util::GlassMath::k_DegreesToRadians;
 
 		// add to azimuth vector
@@ -1550,8 +1551,8 @@ double CHypo::calculateResidual(std::shared_ptr<CPick> pick) {
 	// setup traveltime interface for this hypo
 	m_pTravelTimeTables->setTTOrigin(m_dLatitude, m_dLongitude, m_dDepth);
 
-	// get site
-	std::shared_ptr<CSite> site = pick->getSite();
+	// get site geo
+	glass3::util::Geo siteGeo = pick->getSite()->getGeo();
 
 	// compute observed traveltime
 	double tObs = pick->getTPick() - m_tOrigin;
@@ -1572,19 +1573,19 @@ double CHypo::calculateResidual(std::shared_ptr<CPick> pick) {
 			// valid phase classification,
 			// compute expected travel time based on the pick site location and
 			// the classified pick phase
-			tCal = m_pTravelTimeTables->T(&site->getGeo(),
+			tCal = m_pTravelTimeTables->T(&siteGeo,
 											pick->getClassifiedPhase());
 		} else {
 			// no valid phase classification,
 			// compute expected travel time based on the pick site location and
 			// the observed travel time
-			tCal = m_pTravelTimeTables->T(&site->getGeo(), tObs);
+			tCal = m_pTravelTimeTables->T(&siteGeo, tObs);
 		}
 	} else {
 		// not checking phase classification
 		// compute expected travel time based on the pick site location and
 		// the observed travel time
-		tCal = m_pTravelTimeTables->T(&site->getGeo(), tObs);
+		tCal = m_pTravelTimeTables->T(&siteGeo, tObs);
 	}
 
 	// Check if pick has an invalid travel time,
@@ -1729,7 +1730,7 @@ double CHypo::calculateBayes(double xlat, double xlon, double xZ, double oT,
 
 		// calculate distance to station to get sigma
 		double delta = glass3::util::GlassMath::k_RadiansToDegrees
-				* geo.delta(&site->getGeo());
+				* geo.delta(&siteGeo);
 		double sigma = (tap.calculateValue(delta) * 2.25) + 0.75;
 
 		// calculate and add to the stack
@@ -1933,18 +1934,20 @@ double CHypo::calculateAbsResidualSum(double xlat, double xlon, double xZ,
 		// calculate residual
 		double tobs = pick->getTPick() - oT;
 		double tcal;
-		std::shared_ptr<CSite> site = pick->getSite();
+
+		// get site geo
+		glass3::util::Geo siteGeo = pick->getSite()->getGeo();
 
 		// only use nucleation phase if on nucleation branch
 		if ((nucleate == true) && (m_pNucleationTravelTime2 == NULL)) {
-			tcal = m_pNucleationTravelTime1->T(&site->getGeo());
+			tcal = m_pNucleationTravelTime1->T(&siteGeo);
 			resi = tobs - tcal;
 		} else if ((nucleate == true) && (m_pNucleationTravelTime1 == NULL)) {
-			tcal = m_pNucleationTravelTime2->T(&site->getGeo());
+			tcal = m_pNucleationTravelTime2->T(&siteGeo);
 			resi = tobs - tcal;
 		} else {
 			// take whichever has the smallest residual, P or S
-			tcal = m_pTravelTimeTables->T(&site->getGeo(), tobs);
+			tcal = m_pTravelTimeTables->T(&siteGeo, tobs);
 			if (m_pTravelTimeTables->m_sPhase == "P"
 					|| m_pTravelTimeTables->m_sPhase == "S") {
 				resi = tobs - tcal;
@@ -2050,10 +2053,13 @@ void CHypo::graphicsOutput() {
 			for (int ipick = 0; ipick < npick; ipick++) {
 				auto pick = m_vPickData[ipick];
 				double tobs = pick->getTPick() - m_tOrigin;
-				std::shared_ptr<CSite> site = pick->getSite();
-				tcal = m_pTravelTimeTables->T(&site->getGeo(), tobs);
+
+				// get site geo
+				glass3::util::Geo siteGeo = pick->getSite()->getGeo();
+
+				tcal = m_pTravelTimeTables->T(&siteGeo, tobs);
 				delta = glass3::util::GlassMath::k_RadiansToDegrees
-						* geo.delta(&site->getGeo());
+						* geo.delta(&siteGeo);
 
 				// This should be a function.
 				if (delta < 1.5) {
@@ -2202,8 +2208,9 @@ std::shared_ptr<json::Object> CHypo::generateHypoMessage() {
 	for (auto pick : m_vPickData) {
 		// get basic pick values
 		std::shared_ptr<CSite> site = pick->getSite();
+		glass3::util::Geo siteGeo = site->getGeo();
 		double tobs = pick->getTPick() - m_tOrigin;
-		double tcal = m_pTravelTimeTables->T(&site->getGeo(), tobs);
+		double tcal = m_pTravelTimeTables->T(&siteGeo, tobs);
 		double tres = tobs - tcal;
 		// should this be changed?
 		double sig = glass3::util::GlassMath::sig(tres, 1.0);
@@ -2229,9 +2236,9 @@ std::shared_ptr<json::Object> CHypo::generateHypoMessage() {
 			// add the association info
 			json::Object assocobj;
 			assocobj["Phase"] = m_pTravelTimeTables->m_sPhase;
-			assocobj["Distance"] = geo.delta(&site->getGeo())
+			assocobj["Distance"] = geo.delta(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
-			assocobj["Azimuth"] = geo.azimuth(&site->getGeo())
+			assocobj["Azimuth"] = geo.azimuth(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
 			assocobj["Residual"] = tres;
 			assocobj["Sigma"] = sig;
@@ -2243,9 +2250,9 @@ std::shared_ptr<json::Object> CHypo::generateHypoMessage() {
 			pickObj["T"] = glass3::util::Date::encodeDateTime(pick->getTPick());
 			pickObj["Time"] = glass3::util::Date::encodeISO8601Time(
 					pick->getTPick());
-			pickObj["Distance"] = geo.delta(&site->getGeo())
+			pickObj["Distance"] = geo.delta(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
-			pickObj["Azimuth"] = geo.azimuth(&site->getGeo())
+			pickObj["Azimuth"] = geo.azimuth(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
 			pickObj["Residual"] = tres;
 		}
@@ -2258,8 +2265,9 @@ std::shared_ptr<json::Object> CHypo::generateHypoMessage() {
 	for (auto correlation : m_vCorrelationData) {
 		// get basic pick values
 		std::shared_ptr<CSite> site = correlation->getSite();
+		glass3::util::Geo siteGeo = site->getGeo();
 		double tobs = correlation->getTCorrelation() - m_tOrigin;
-		double tcal = m_pTravelTimeTables->T(&site->getGeo(), tobs);
+		double tcal = m_pTravelTimeTables->T(&siteGeo, tobs);
 		double tres = tobs - tcal;
 		// should this be changed?
 		double sig = glass3::util::GlassMath::sig(tres, 1.0);
@@ -2286,9 +2294,9 @@ std::shared_ptr<json::Object> CHypo::generateHypoMessage() {
 			// add the association info
 			json::Object assocobj;
 			assocobj["Phase"] = m_pTravelTimeTables->m_sPhase;
-			assocobj["Distance"] = geo.delta(&site->getGeo())
+			assocobj["Distance"] = geo.delta(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
-			assocobj["Azimuth"] = geo.azimuth(&site->getGeo())
+			assocobj["Azimuth"] = geo.azimuth(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
 			assocobj["Residual"] = tres;
 			assocobj["Sigma"] = sig;
@@ -2302,9 +2310,9 @@ std::shared_ptr<json::Object> CHypo::generateHypoMessage() {
 			correlationObj["Latitude"] = correlation->getLatitude();
 			correlationObj["Longitude"] = correlation->getLongitude();
 			correlationObj["Depth"] = correlation->getDepth();
-			correlationObj["Distance"] = geo.delta(&site->getGeo())
+			correlationObj["Distance"] = geo.delta(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
-			correlationObj["Azimuth"] = geo.azimuth(&site->getGeo())
+			correlationObj["Azimuth"] = geo.azimuth(&siteGeo)
 					/ glass3::util::GlassMath::k_DegreesToRadians;
 			correlationObj["Residual"] = tres;
 			correlationObj["Correlation"] = correlation->getCorrelation();
@@ -2603,7 +2611,9 @@ bool CHypo::pruneData() {
 		// Trim whiskers
 		// compute delta between site and hypo
 		// THIS NEEDS TO BE CONVERTER DO DEG BUT NEED TO TEST LATER - WY
-		double delta = geo.delta(&pck->getSite()->getGeo());
+		// get the site geo
+		glass3::util::Geo siteGeo = pck->getSite()->getGeo();
+		double delta = geo.delta(&siteGeo);
 		// check if delta is beyond distance limit
 		if (delta > m_dAssociationDistanceCutoff) {
 			snprintf(
@@ -3005,18 +3015,18 @@ void CHypo::calculateStatistics() {
 	std::vector<double> dis;
 	std::vector<double> azm;
 	for (auto pick : m_vPickData) {
-		// get the site
-		std::shared_ptr<CSite> site = pick->getSite();
+		// get the site geo
+		glass3::util::Geo siteGeo = pick->getSite()->getGeo();
 
 		// compute the distance delta
-		double delta = geo.delta(&site->getGeo())
+		double delta = geo.delta(&siteGeo)
 				/ glass3::util::GlassMath::k_DegreesToRadians;
 
 		// add to distance vactor
 		dis.push_back(delta);
 
 		// compute the azimuth
-		double azimuth = geo.azimuth(&site->getGeo())
+		double azimuth = geo.azimuth(&siteGeo)
 				/ glass3::util::GlassMath::k_DegreesToRadians;
 
 		// add to azimuth vector

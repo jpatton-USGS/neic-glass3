@@ -209,7 +209,8 @@ TEST(SiteTest, Distance) {
 
 	// test getDelta
 	double expectedDelta = SITE2DELTA;
-	ASSERT_DOUBLE_EQ(expectedDelta, testSite->getDelta(&testSite2->getGeo()));
+	glass3::util::Geo siteGeo = testSite2->getGeo();
+	ASSERT_DOUBLE_EQ(expectedDelta, testSite->getDelta(&siteGeo));
 }
 
 // tests to see if picks can be added to and removed from the site

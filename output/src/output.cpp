@@ -62,32 +62,34 @@ output::output()
 
 // ---------------------------------------------------------~output
 output::~output() {
-	// cleanup
-	// cppcheck-suppress nullPointerRedundantCheck
-	if (m_TrackingCache != NULL) {
-		m_TrackingCache->clear();
-		delete (m_TrackingCache);
-		m_TrackingCache = NULL;
-	}
+	try {
+		// cleanup
+		// cppcheck-suppress nullPointerRedundantCheck
+		if (m_TrackingCache != NULL) {
+			m_TrackingCache->clear();
+			delete (m_TrackingCache);
+			m_TrackingCache = NULL;
+		}
 
-	// cppcheck-suppress nullPointerRedundantCheck
-	if (m_OutputQueue != NULL) {
-		m_OutputQueue->clear();
-		delete (m_OutputQueue);
-		m_OutputQueue = NULL;
-	}
+		// cppcheck-suppress nullPointerRedundantCheck
+		if (m_OutputQueue != NULL) {
+			m_OutputQueue->clear();
+			delete (m_OutputQueue);
+			m_OutputQueue = NULL;
+		}
 
-	// cppcheck-suppress nullPointerRedundantCheck
-	if (m_LookupQueue != NULL) {
-		m_LookupQueue->clear();
-		delete (m_LookupQueue);
-		m_LookupQueue = NULL;
-	}
+		// cppcheck-suppress nullPointerRedundantCheck
+		if (m_LookupQueue != NULL) {
+			m_LookupQueue->clear();
+			delete (m_LookupQueue);
+			m_LookupQueue = NULL;
+		}
 
-	if (m_ThreadPool != NULL) {
-		delete(m_ThreadPool);
-		m_ThreadPool = NULL;
-	}
+		if (m_ThreadPool != NULL) {
+			delete(m_ThreadPool);
+			m_ThreadPool = NULL;
+		}
+	} catch (...) {}
 }
 
 // configuration

@@ -1900,11 +1900,11 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 				// get last site in node list
 				// NOTE: this assumes that the node site list is sorted
 				// on distance, which it is supposed to be
-				std::shared_ptr<CSite> furthestSite = node->getLastSite();
+				glass3::util::Geo furthestSiteGeo = node->getLastSite()->getGeo();
 
 				// compute the distance to farthest site
 				double maxDistance = glass3::util::GlassMath::k_RadiansToDegrees
-						* geo.delta(&furthestSite->getGeo());
+						* geo.delta(&furthestSiteGeo);
 
 				// if we have a maximum node-site distance
 				if (m_dMaxSiteDistance > 0) {

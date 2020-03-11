@@ -89,35 +89,34 @@ class InputTest : public ::testing::Test {
 	}
 
 	virtual void TearDown() {
-		// need to move the files in error and archive back to input
-		// if (std::ifstream(ccfile).good()) {
-		// 	glass3::util::moveFileTo(ccfile, inputdirectory);
-		// }
-		if (std::ifstream(gpickfile).good()) {
-			glass3::util::moveFileTo(gpickfile, inputdirectory);
-		}
-		// if (std::ifstream(jsonpickfile).good()) {
-		// 	glass3::util::moveFileTo(jsonpickfile, inputdirectory);
-		// }
-		// if (std::ifstream(jsoncorlfile).good()) {
-		// 	glass3::util::moveFileTo(jsoncorlfile, inputdirectory);
-		// }
-		// if (std::ifstream(jsonorigfile).good()) {
-		// 	glass3::util::moveFileTo(jsonorigfile, inputdirectory);
-		// }
-		// if (std::ifstream(badfile).good()) {
-		// 	glass3::util::moveFileTo(badfile, inputdirectory);
-		// }
+		try {
+			// need to move the files in error and archive back to input
+			// if (std::ifstream(ccfile).good()) {
+			// 	glass3::util::moveFileTo(ccfile, inputdirectory);
+			// }
+			if (std::ifstream(gpickfile).good()) {
+				glass3::util::moveFileTo(gpickfile, inputdirectory);
+			}
+			// if (std::ifstream(jsonpickfile).good()) {
+			// 	glass3::util::moveFileTo(jsonpickfile, inputdirectory);
+			// }
+			// if (std::ifstream(jsoncorlfile).good()) {
+			// 	glass3::util::moveFileTo(jsoncorlfile, inputdirectory);
+			// }
+			// if (std::ifstream(jsonorigfile).good()) {
+			// 	glass3::util::moveFileTo(jsonorigfile, inputdirectory);
+			// }
+			// if (std::ifstream(badfile).good()) {
+			// 	glass3::util::moveFileTo(badfile, inputdirectory);
+			// }
 
-		// need to clean up error and archive directories
+			// need to clean up error and archive directories
 #ifdef _WIN32
-		RemoveDirectory(archivedirectory.c_str());
+			RemoveDirectory(archivedirectory.c_str());
 #else
-		rmdir(archivedirectory.c_str());
+			rmdir(archivedirectory.c_str());
 #endif
-
-		// cleanup input thread
-		InputThread->stop();
+		} catch (...) {}
 	}
 
 	glass3::fileInput * InputThread;
@@ -235,4 +234,6 @@ TEST_F(InputTest, Run) {
 
 	// assert that class is empty
 	ASSERT_EQ(InputThread->getInputDataCount(), 0) << "input thread is empty";
+
+	InputThread->stop();
 }

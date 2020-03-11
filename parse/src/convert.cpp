@@ -15,6 +15,7 @@
 // JSON Keys
 #define TYPE_KEY "Type"
 #define STATIONLIST_KEY "StationList"
+#define TIMELASTPICKED_KEY "TimeLastPicked"
 
 namespace glass3 {
 namespace parse {
@@ -636,9 +637,9 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 					stationObject.tojson(stationJSON, allocator);
 
 					// add tLastPicked, which isn't technically part of the official
-					// station info format
+					// station info format to the json
 					if (tLastPicked > 0) {
-						// convert to iso8601
+						// convert epoch time to iso8601 time string
 						std::string timestring =
 							glass3::util::Date::convertEpochTimeToISO8601(
 								static_cast<double>(tLastPicked));
@@ -648,7 +649,7 @@ std::string siteListToStationList(std::shared_ptr<json::Object> data) {
 						timevalue.SetString(rapidjson::StringRef(timestring.c_str()),
 											allocator);
 
-						stationJSON.AddMember("TimeLastPicked", timevalue, allocator);
+						stationJSON.AddMember(TIMELASTPICKED_KEY, timevalue, allocator);
 					}
 
 					// add station to array

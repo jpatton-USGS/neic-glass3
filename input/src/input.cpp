@@ -57,28 +57,30 @@ Input::Input(std::shared_ptr<const json::Object> config)
 
 // ---------------------------------------------------------~Input
 Input::~Input() {
-	if (m_DataQueue != NULL) {
-		// clear the queue
-		m_DataQueue->clear();
+	try {
+		if (m_DataQueue != NULL) {
+			// clear the queue
+			m_DataQueue->clear();
 
-		delete (m_DataQueue);
-	}
+			delete (m_DataQueue);
+		}
 
-	if (m_GPickParser != NULL) {
-		delete (m_GPickParser);
-	}
+		if (m_GPickParser != NULL) {
+			delete (m_GPickParser);
+		}
 
-	if (m_JSONParser != NULL) {
-		delete (m_JSONParser);
-	}
+		if (m_JSONParser != NULL) {
+			delete (m_JSONParser);
+		}
 
-	if (m_CCParser != NULL) {
-		delete (m_CCParser);
-	}
+		if (m_CCParser != NULL) {
+			delete (m_CCParser);
+		}
 
-	if (m_SimplePickParser != NULL) {
-		delete (m_SimplePickParser);
-	}
+		if (m_SimplePickParser != NULL) {
+			delete (m_SimplePickParser);
+		}
+	} catch (...) {}
 }
 
 
