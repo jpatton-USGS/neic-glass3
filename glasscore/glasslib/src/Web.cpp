@@ -336,7 +336,7 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			}
 
 			// sort site list for this vertex
-			sites = sortSiteListForNode(aLat, aLon, z, sites);
+			sortSiteListForNode(aLat, aLon, z, &sites);
 
 			// it would make a certain amount of sense here, to track
 			// the depth delta between this node and the vertically
@@ -347,7 +347,7 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 			// during initial location.
 			// create node
 			std::shared_ptr<CNode> node = generateNode(aLat, aLon, z,
-														getNodeResolution(), sites);
+														getNodeResolution(), &sites);
 
 			// if we got a valid node, add it
 			if (addNode(node) == true) {
@@ -386,6 +386,8 @@ bool CWeb::generateGlobalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 		std::lock_guard<std::recursive_mutex> ttGuard(m_travelTimeMutex);
 		phases += ", " + m_pNucleationTravelTime2->m_sPhase;
 	}
+
+	sites.clear();
 
 	// log grid info
 	snprintf(
@@ -592,11 +594,11 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 				}
 
 				// sort site list for this generateLocalGrid point
-				sites = sortSiteListForNode(latrow, loncol, z, sites);
+				sortSiteListForNode(latrow, loncol, z, &sites);
 
 				// generate this node
 				std::shared_ptr<CNode> node = generateNode(
-						latrow, loncol, z, getNodeResolution(), sites);
+						latrow, loncol, z, getNodeResolution(), &sites);
 
 				// if we got a valid node, add it
 				if (addNode(node) == true) {
@@ -632,6 +634,8 @@ bool CWeb::generateLocalGrid(std::shared_ptr<json::Object> gridConfiguration) {
 		std::lock_guard<std::recursive_mutex> ttGuard(m_travelTimeMutex);
 		phases += ", " + m_pNucleationTravelTime2->m_sPhase;
 	}
+
+	sites.clear();
 
 	// log local grid info
 	snprintf(
@@ -769,14 +773,14 @@ bool CWeb::generateExplicitGrid(
 		double Z = nodes[i][k_iNodeDepthIndex];
 
 		// sort site list
-		sites = sortSiteListForNode(lat, lon, Z, sites);
+		sortSiteListForNode(lat, lon, Z, &sites);
 
 		// don't do any maxdepth/zonestats checks here, since this grid is
 		// explicit
 
 		// create node, note resolution set to 0
 		std::shared_ptr<CNode> node = generateNode(lat, lon, Z,
-													getNodeResolution(), sites);
+													getNodeResolution(), &sites);
 
 		if (addNode(node) == true) {
 			iNodeCount++;
@@ -801,6 +805,8 @@ bool CWeb::generateExplicitGrid(
 		std::lock_guard<std::recursive_mutex> ttGuard(m_travelTimeMutex);
 		phases += ", " + m_pNucleationTravelTime2->m_sPhase;
 	}
+
+	sites.clear();
 
 	// log explicit grid info
 	snprintf(
@@ -1463,17 +1469,22 @@ int CWeb::loadWebSiteList() {
 }
 
 // ---------------------------------------------------------sortSiteListForNode
-std::vector<std::pair<double, std::shared_ptr<CSite>>>
+std::vector<std::pair<double, std::shared_ptr<CSite>>> *
 	CWeb::sortSiteListForNode(double lat, double lon, double depth,
-		std::vector<std::pair<double, std::shared_ptr<CSite>>> sites) {
+		std::vector<std::pair<double, std::shared_ptr<CSite>>>* sites) {
+	if (sites == NULL) {
+		glass3::util::Logger::log("error", "CWeb::sortSiteListForNode: No sites.");
+		return (NULL);
+	}
+
 	// set to provided geographic location
 	glass3::util::Geo geo;
 	geo.setGeographic(lat, lon, glass3::util::Geo::k_EarthRadiusKm - depth);
 
 	// compute the distance to each site
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
-		= sites.begin();
-		it != sites.end(); ++it) {
+		= sites->begin();
+		it != sites->end(); ++it) {
 		// get the site distance pair
 		auto sitePair = *it;
 
@@ -1496,19 +1507,24 @@ std::vector<std::pair<double, std::shared_ptr<CSite>>>
 	}
 
 	// sort site distance pair list
-	std::sort(sites.begin(), sites.end(), sortSite);
+	std::sort(sites->begin(), sites->end(), sortSite);
 
 	return(sites);
 }
 
 // ---------------------------------------------------------generateNode
 std::shared_ptr<CNode> CWeb::generateNode(double lat, double lon, double z,
-		double resol, std::vector<std::pair<double, std::shared_ptr<CSite>>> sites) {
+		double resol, std::vector<std::pair<double, std::shared_ptr<CSite>>>* sites) {
 	// nullcheck
 	if ((m_pNucleationTravelTime1 == NULL)
 			&& (m_pNucleationTravelTime2 == NULL)) {
 		glass3::util::Logger::log("error",
 									"CWeb::genNode: No valid trav pointers.");
+		return (NULL);
+	}
+
+	if (sites == NULL) {
+		glass3::util::Logger::log("error", "CWeb::generateNode: No sites.");
 		return (NULL);
 	}
 
@@ -1525,7 +1541,7 @@ std::shared_ptr<CNode> CWeb::generateNode(double lat, double lon, double z,
 
 	// return empty node if we don't
 	// have any sites
-	if (sites.size() == 0) {
+	if (sites->size() == 0) {
 		return (node);
 	}
 
@@ -1551,7 +1567,7 @@ bool CWeb::addNode(std::shared_ptr<CNode> node) {
 
 // ---------------------------------------------------------generateNodeSites
 std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
-	std::vector<std::pair<double, std::shared_ptr<CSite>>> sites) {
+	std::vector<std::pair<double, std::shared_ptr<CSite>>>* sites) {
 	// nullchecks
 	// check node
 	if (node == NULL) {
@@ -1567,7 +1583,11 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 		return (NULL);
 	}
 	// check sites
-	if (sites.size() == 0) {
+	if (sites == NULL) {
+		glass3::util::Logger::log("error", "CWeb::genNodeSites: No sites.");
+		return (node);
+	}
+	if (sites->size() == 0) {
 		glass3::util::Logger::log("error", "CWeb::genNodeSites: No sites.");
 		return (node);
 	}
@@ -1582,7 +1602,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 	setThreadHealth(true);
 
 	int sitesAllowed = m_iNumStationsPerNode;
-	int sitesAvailable = sites.size();
+	int sitesAvailable = sites->size();
 	if (sitesAvailable < sitesAllowed) {
 		glass3::util::Logger::log("warning",
 									"CWeb::genNodeSites: the number of sites allowed ("
@@ -1604,8 +1624,8 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 	int siteCount = 0;
 	double furthestDistance = 0.0;
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
-			= sites.begin();
-			it != sites.end(); ++it) {
+			= sites->begin();
+			it != sites->end(); ++it) {
 		// update thread status
 		setThreadHealth(true);
 
@@ -1943,13 +1963,13 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 		}
 
 		// resort the site list for the current node,
-		sites = sortSiteListForNode(node->getLatitude(), node->getLongitude(),
-			node->getDepth(), sites);
+		sortSiteListForNode(node->getLatitude(), node->getLongitude(),
+			node->getDepth(), &sites);
 
 		// its easier (logically) to just regenerate the node links than rat through
 		// and figure out where/how to add / remove / update the new station.
 		// so just rebuild the node
-		generateNodeSites(node, sites);
+		generateNodeSites(node, &sites);
 
 		// we've modified a node
 		nodeModCount++;
@@ -1966,6 +1986,8 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 							+ std::to_string(nodeModCount) + " nodes so far.");
 		}
 	}
+
+	sites.clear();
 
 	std::chrono::high_resolution_clock::time_point tEndTime =
 			std::chrono::high_resolution_clock::now();

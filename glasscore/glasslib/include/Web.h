@@ -261,9 +261,9 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * \param sites - A vector of site distance pairs to sort
 	 * \return the sorted vector of site distance pairs
 	 */
-	std::vector<std::pair<double, std::shared_ptr<CSite>>> sortSiteListForNode(
+	std::vector<std::pair<double, std::shared_ptr<CSite>>> * sortSiteListForNode(
 			double lat, double lon, double depth,
-			std::vector<std::pair<double, std::shared_ptr<CSite>>> sites);
+			std::vector<std::pair<double, std::shared_ptr<CSite>>>* sites);
 
 	/**
 	 * \brief Create new node
@@ -281,7 +281,7 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 */
 	std::shared_ptr<CNode> generateNode(double lat, double lon, double z,
 										double resol,
-										std::vector<std::pair<double, std::shared_ptr<CSite>>> sites);
+										std::vector<std::pair<double, std::shared_ptr<CSite>>>* sites);
 
 	/**
 	 * \brief Add node to list
@@ -304,7 +304,7 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 * \return Returns a std::shared_ptr to the updated node.
 	 */
 	std::shared_ptr<CNode> generateNodeSites(std::shared_ptr<CNode> node,
-		std::vector<std::pair<double, std::shared_ptr<CSite>>> sites);
+		std::vector<std::pair<double, std::shared_ptr<CSite>>>* sites);
 
 	/**
 	 * \brief Add site to node
