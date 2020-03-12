@@ -312,11 +312,12 @@ class CWeb : public glass3::util::ThreadBaseClass {
 	 *
 	 * \param newSite - A shared pointer to a CSite object containing the site to
 	 * add 
+	 * \param siteDistance - A double containing the node site distance
 	 * \param node - A shared pointer to a CNode object containing the node to
 	 * modify 
 	 * \return returns true if successful, false otherwise
 	 */
-	bool addSiteToNode(std::shared_ptr<CSite> newSite,
+	bool addSiteToNode(std::shared_ptr<CSite> newSite, double siteDistance,
 		std::shared_ptr<CNode> node);
 
 	/**

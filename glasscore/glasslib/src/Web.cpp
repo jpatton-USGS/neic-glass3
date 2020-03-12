@@ -1602,7 +1602,6 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 	// for all the allowed sites (note we won't usually end up going through all
 	// of them)
 	int siteCount = 0;
-	int failCount = 0;
 	double furthestDistance = 0.0;
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
 			= sites.begin();
@@ -1619,12 +1618,21 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 		// get the site distance pair
 		auto sitePair = *it;
 
+		// get the node site distance from the first part of the pair
+		// note that site pair distance is in radians
+		double siteDistance = (sitePair.first *
+			glass3::util::GlassMath::k_RadiansToDegrees);
+
+		// check to see if distance is valid
+		if (siteDistance < 0) {
+			// skip this site with a bad distance
+			continue;
+		}
+
 		// if we have a maximum node-site distance for this web
 		if (m_dMaxSiteDistance > 0) {
-			// skip if site pair past maximum node-site distance
-			// note that site pair distance is in radians
-			if ((sitePair.first * glass3::util::GlassMath::k_RadiansToDegrees) >
-					m_dMaxSiteDistance) {
+			// skip if node-site distance past maximum node-site distance
+			if (siteDistance > m_dMaxSiteDistance) {
 				continue;
 			}
 		}
@@ -1639,25 +1647,16 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 		}
 
 		// add current site to this node
-		if (addSiteToNode(site, node) == false) {
-			if (failCount > sitesAllowed) {
-				// give up
-				break;
-			}
-
-			// move on to the next site
-			failCount++;
+		// we've tried to add a site
+		siteCount++;
+		if (addSiteToNode(site, siteDistance, node) == false) {
 			continue;
-		} else {
-			// keep track of the furthest distance
-			if ((sitePair.first * glass3::util::GlassMath::k_RadiansToDegrees) >
-					furthestDistance) {
-				furthestDistance = (sitePair.first *
-					glass3::util::GlassMath::k_RadiansToDegrees);
-			}
+		}
 
-			// we've added a site
-			siteCount++;
+		// keep track of the furthest distance
+		if (siteDistance > furthestDistance) {
+			furthestDistance = (sitePair.first *
+				glass3::util::GlassMath::k_RadiansToDegrees);
 		}
 	}
 
@@ -1675,7 +1674,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 }
 
 // ---------------------------------------------------------addSiteToNode
-bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
+bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite, double siteDistance,
 	std::shared_ptr<CNode> node) {
 	if (newSite == NULL) {
 		return(false);
@@ -1685,13 +1684,8 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		return(false);
 	}
 
-	// compute distance between site and node
-	glass3::util::Geo geoNode = node->getGeo();
-	double distance = glass3::util::GlassMath::k_RadiansToDegrees
-			* newSite->getDelta(&geoNode);
-
 	// check distance
-	if (distance < 0) {
+	if (siteDistance < 0) {
 		glass3::util::Logger::log(
 				"error",
 				"CWeb::addSiteToNode: Invalid distance for site "
@@ -1702,14 +1696,6 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 						+ " in web " + m_sName + ".");
 
 		return(false);
-	}
-
-	// if we have a maximum node-site distance for this web
-	if (m_dMaxSiteDistance > 0) {
-		// skip if site past maximum node-site distance
-		if (distance > m_dMaxSiteDistance) {
-			return(false);
-		}
 	}
 
 	// lock the travel times so it is constant while we build the node
@@ -1743,14 +1729,14 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 	double travelTime1 = traveltime::CTravelTime::k_dTravelTimeInvalid;
 	std::string phase1 = traveltime::CTravelTime::k_dPhaseInvalid;
 	if (m_pNucleationTravelTime1 != NULL) {
-		travelTime1 = m_pNucleationTravelTime1->T(distance);
+		travelTime1 = m_pNucleationTravelTime1->T(siteDistance);
 		phase1 = m_pNucleationTravelTime1->m_sPhase;
 	}
 
 	double travelTime2 = traveltime::CTravelTime::k_dTravelTimeInvalid;
 	std::string phase2 = traveltime::CTravelTime::k_dPhaseInvalid;
 	if (m_pNucleationTravelTime2 != NULL) {
-		travelTime2 = m_pNucleationTravelTime2->T(distance);
+		travelTime2 = m_pNucleationTravelTime2->T(siteDistance);
 		phase2 = m_pNucleationTravelTime2->m_sPhase;
 	}
 
@@ -1772,7 +1758,7 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 	}
 
 	// Link node to new site using traveltime(s)
-	if (node->linkSite(newSite, node, distance, travelTime1, phase1,
+	if (node->linkSite(newSite, node, siteDistance, travelTime1, phase1,
 						travelTime2, phase2) == false) {
 		glass3::util::Logger::log(
 				"error",
