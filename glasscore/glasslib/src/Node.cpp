@@ -257,11 +257,14 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin,
 	std::vector<SiteLink> vLinks(m_vSiteLinkList);
 	m_SiteLinkListMutex.unlock();
 
+	bool error = false;
+
 	// search through each site linked to this node
 	for (const auto &link : vLinks) {
 		// halt and return null if the node has been disabled
 		if (m_bEnabled == false) {
-			return (NULL);
+			error = true;
+			break;
 		}
 
 		if (parentThread != NULL) {
@@ -356,7 +359,8 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin,
 		for (auto it = lower; (it != site->getEnd()); ++it) {
 			// halt and return null if the node has been disabled
 			if (m_bEnabled == false) {
-				return (NULL);
+				error = true;
+				break;
 			}
 
 			auto pick = *it;
@@ -533,6 +537,10 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin,
 			}
 		}  // ---- end search through each pick at this site ----
 
+		if (error == true) {
+			break;
+		}
+
 		site->getPickMutex().unlock();
 
 		if (parentThread != NULL) {
@@ -565,8 +573,15 @@ std::shared_ptr<CTrigger> CNode::nucleate(double tOrigin,
 		}
 	}  // ---- end search through each site this node is linked to ----
 
+	vLinks.clear();
+
 	if (parentThread != NULL) {
 			parentThread->setThreadHealth();
+	}
+
+	if (error == true) {
+		// the node did not nucleate an event
+		return (NULL);
 	}
 
 	// make sure the number of significant picks
