@@ -79,6 +79,7 @@ void CNode::clear() {
 	m_dResolution = 0;
 	m_dMaxDepth = 0;
 	m_bEnabled = false;
+	m_dMaxSiteDistance = 0;
 }
 
 // ---------------------------------------------------------clearSiteLinks
@@ -98,6 +99,9 @@ void CNode::clearSiteLinks() {
 
 	// remove all the links from this node to sites
 	m_vSiteLinkList.clear();
+
+	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
+	m_dMaxSiteDistance = 0;
 }
 
 // ---------------------------------------------------------initialize
@@ -210,34 +214,6 @@ bool CNode::unlinkSite(std::shared_ptr<CSite> site) {
 	// unlock before returning
 	m_SiteLinkListMutex.unlock();
 	return (false);
-}
-
-// ---------------------------------------------------------unlinkLastSite
-bool CNode::unlinkLastSite() {
-	// get the last site in the list
-	std::shared_ptr<CSite> lastSite = getLastSite();
-
-	if (lastSite == NULL) {
-		return (false);
-	}
-
-	m_bEnabled = false;
-
-	// unlink node from last site
-	// done before lock guard to prevent
-	// deadlock between node and site list mutexes.
-	lastSite->removeNode(getID());
-
-	// lock mutex for this scope
-	std::lock_guard < std::mutex > guard(m_SiteLinkListMutex);
-
-	// unlink last site from node
-	m_vSiteLinkList.pop_back();
-
-	// enable node
-	m_bEnabled = true;
-
-	return (true);
 }
 
 // ---------------------------------------------------------nucleate
@@ -809,4 +785,17 @@ std::string CNode::getID() const {
 					+ std::to_string(getLongitude()) + "."
 					+ std::to_string(getDepth())));
 }
+
+// ---------------------------------------------------------getMaxSiteDistance
+double CNode::getMaxSiteDistance() const {
+	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
+	return(m_dMaxSiteDistance);
+}
+
+// ---------------------------------------------------------setMaxSiteDistance
+void CNode::setMaxSiteDistance(double newMaxDistance) {
+	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
+	m_dMaxSiteDistance = newMaxDistance;
+}
+
 }  // namespace glasscore

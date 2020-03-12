@@ -1603,6 +1603,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 	// of them)
 	int siteCount = 0;
 	int failCount = 0;
+	double furthestDistance = 0;
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
 			= sites.begin();
 			it != sites.end(); ++it) {
@@ -1617,13 +1618,13 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 
 		// get the site distance pair
 		auto sitePair = *it;
-
-		// if we have a maximum node-site distance
+		double siteDistance = sitePair.first *
+			glass3::util::GlassMath::k_RadiansToDegrees;
+		// if we have a maximum node-site distance for this web
 		if (m_dMaxSiteDistance > 0) {
 			// skip if site pair past maximum node-site distance
 			// note that site pair distance is in radians
-			if ((sitePair.first * glass3::util::GlassMath::k_RadiansToDegrees) >
-					m_dMaxSiteDistance) {
+			if (siteDistance > m_dMaxSiteDistance) {
 				continue;
 			}
 		}
@@ -1648,6 +1649,11 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 			failCount++;
 			continue;
 		} else {
+			// keep track fo the furthest distance
+			if (siteDistance > furthestDistance) {
+				furthestDistance = siteDistance;
+			}
+
 			// we've added a site
 			siteCount++;
 		}
@@ -1655,6 +1661,9 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 
 	// sort the site links in ascending distance
 	node->sortSiteLinks();
+
+	// save the furthest distance
+	node->setMaxSiteDistance(furthestDistance);
 
 	// done with node
 	node->setEnabled(true);
@@ -1693,7 +1702,7 @@ bool CWeb::addSiteToNode(std::shared_ptr<CSite> newSite,
 		return(false);
 	}
 
-	// if we have a maximum node-site distance
+	// if we have a maximum node-site distance for this web
 	if (m_dMaxSiteDistance > 0) {
 		// skip if site past maximum node-site distance
 		if (distance > m_dMaxSiteDistance) {
@@ -1896,18 +1905,9 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 				geo.setGeographic(node->getLatitude(), node->getLongitude(),
 									glass3::util::Geo::k_EarthRadiusKm - node->getDepth());
 
-				// compute delta distance between site and node
+				// compute delta distance between site and this node
 				double newDistance = glass3::util::GlassMath::k_RadiansToDegrees
 						* siteGeo.delta(&geo);
-
-				// get last site in node list
-				// NOTE: this assumes that the node site list is sorted
-				// on distance, which it is supposed to be
-				glass3::util::Geo furthestSiteGeo = node->getLastSite()->getGeo();
-
-				// compute the distance to farthest site
-				double maxDistance = glass3::util::GlassMath::k_RadiansToDegrees
-						* geo.delta(&furthestSiteGeo);
 
 				// if we have a maximum node-site distance
 				if (m_dMaxSiteDistance > 0) {
@@ -1921,7 +1921,7 @@ void CWeb::updateSite(std::shared_ptr<CSite> site) {
 				// Ignore (skip) this add if new site is farther than last linked site,
 				// and if this node has the maximum number of sites (no more space)
 				if ((node->getSiteLinksCount() >= m_iNumStationsPerNode)
-						&& (newDistance > maxDistance)) {
+						&& (newDistance > node->getMaxSiteDistance())) {
 					continue;
 				}
 			} else {

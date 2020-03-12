@@ -896,6 +896,10 @@ double CSite::getRawElevation() const {
 
 // ---------------------------------------------------------getGeo
 glass3::util::Geo CSite::getGeo() {
+	// NOTE: on occasion I have seen segmentation fault crashes
+	// on calling this mutex for this function, I don't understand why. The
+	// solution thus far is to code the algorithm such that the crashing call path
+	// is avoided.
 	std::lock_guard<std::recursive_mutex> guard(m_SiteMutex);
 
 	// make a copy
