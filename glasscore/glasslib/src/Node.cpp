@@ -79,17 +79,18 @@ void CNode::clear() {
 	m_dResolution = 0;
 	m_dMaxDepth = 0;
 	m_bEnabled = false;
-	m_dMaxSiteDistance = 0;
 }
 
 // ---------------------------------------------------------clearSiteLinks
 void CNode::clearSiteLinks() {
+	// lock mutex for this scope
+	std::lock_guard < std::mutex > guard(m_SiteLinkListMutex);
+
+	m_dMaxSiteDistance = 0;
+
 	if (m_vSiteLinkList.size() == 0) {
 		return;
 	}
-
-	// lock mutex for this scope
-	std::lock_guard < std::mutex > guard(m_SiteLinkListMutex);
 
 	// remove any links that sites have TO this node
 	for (auto &link : m_vSiteLinkList) {
@@ -99,9 +100,6 @@ void CNode::clearSiteLinks() {
 
 	// remove all the links from this node to sites
 	m_vSiteLinkList.clear();
-
-	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
-	m_dMaxSiteDistance = 0;
 }
 
 // ---------------------------------------------------------initialize
@@ -788,13 +786,13 @@ std::string CNode::getID() const {
 
 // ---------------------------------------------------------getMaxSiteDistance
 double CNode::getMaxSiteDistance() const {
-	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
+	std::lock_guard < std::mutex > guard(m_SiteLinkListMutex);
 	return(m_dMaxSiteDistance);
 }
 
 // ---------------------------------------------------------setMaxSiteDistance
 void CNode::setMaxSiteDistance(double newMaxDistance) {
-	std::lock_guard < std::recursive_mutex > nodeGuard(m_NodeMutex);
+	std::lock_guard < std::mutex > guard(m_SiteLinkListMutex);
 	m_dMaxSiteDistance = newMaxDistance;
 }
 

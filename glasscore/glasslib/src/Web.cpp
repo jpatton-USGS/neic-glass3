@@ -1603,7 +1603,7 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 	// of them)
 	int siteCount = 0;
 	int failCount = 0;
-	double furthestDistance = 0;
+	double furthestDistance = 0.0;
 	for (std::vector<std::pair<double, std::shared_ptr<CSite>>>::iterator it
 			= sites.begin();
 			it != sites.end(); ++it) {
@@ -1618,13 +1618,13 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 
 		// get the site distance pair
 		auto sitePair = *it;
-		double siteDistance = sitePair.first *
-			glass3::util::GlassMath::k_RadiansToDegrees;
+
 		// if we have a maximum node-site distance for this web
 		if (m_dMaxSiteDistance > 0) {
 			// skip if site pair past maximum node-site distance
 			// note that site pair distance is in radians
-			if (siteDistance > m_dMaxSiteDistance) {
+			if ((sitePair.first * glass3::util::GlassMath::k_RadiansToDegrees) >
+					m_dMaxSiteDistance) {
 				continue;
 			}
 		}
@@ -1649,9 +1649,11 @@ std::shared_ptr<CNode> CWeb::generateNodeSites(std::shared_ptr<CNode> node,
 			failCount++;
 			continue;
 		} else {
-			// keep track fo the furthest distance
-			if (siteDistance > furthestDistance) {
-				furthestDistance = siteDistance;
+			// keep track of the furthest distance
+			if ((sitePair.first * glass3::util::GlassMath::k_RadiansToDegrees) >
+					furthestDistance) {
+				furthestDistance = (sitePair.first *
+					glass3::util::GlassMath::k_RadiansToDegrees);
 			}
 
 			// we've added a site
