@@ -572,6 +572,8 @@ double CHypo::anneal(int nIter, double dStart, double dStop, double tStart,
 		removePickReference(pick);
 	}
 
+	vRemovePicks.clear();
+
 	glass3::util::Logger::log("debug", "CHypo::anneal. " + m_sID + " bayes: " +
 		std::to_string(m_dBayesValue));
 
@@ -1539,6 +1541,7 @@ double CHypo::calculateGap(double lat, double lon, double z) {
 			tempGap = gap;
 		}
 	}
+	azm.clear();
 
 	return tempGap;
 }

@@ -1410,8 +1410,8 @@ int CWeb::loadWebSiteList() {
 	}
 
 	// git all the sites in pSiteList
-	std::vector<std::shared_ptr<CSite>> siteList =
-			m_pSiteList->getListOfSites();
+	std::vector<std::shared_ptr<CSite>> siteList(
+			m_pSiteList->getListOfSites());
 
 	// get the total number sites in glass's site list
 	int nsite = siteList.size();
@@ -1457,6 +1457,8 @@ int CWeb::loadWebSiteList() {
 	int newSize = vWebSites.size();
 
 	m_vSiteMutex.unlock();
+
+	siteList.clear();
 
 	// log
 	// char sLog[glass3::util::Logger::k_nMaxLogEntrySize];
